@@ -1,4 +1,4 @@
-import { class_EventEmitter, class_Dfr } from 'atma-utils';
+import { class_EventEmitter, class_Dfr, class_Uri } from 'atma-utils';
 import { File, Directory } from 'atma-io';
 import * as child_process from 'child_process';
 import { command_parseAll } from './util/command';
@@ -17,7 +17,7 @@ export type ProcessEventType =
 export class Shell extends class_EventEmitter {
 
     children = [] as  child_process.ChildProcessWithoutNullStreams[]
-    errors = []
+    errors = [] as { command: string, error: Error }[]
     lastCode: number = 0
     silent: boolean
     parallel: boolean
@@ -113,14 +113,23 @@ export class Shell extends class_EventEmitter {
                 this.state = -1;
                 this.end = new Date();
                 this.busy = false;
-                (this.promise as any).resolve(this);
+
+                const promise = this.promise as any as class_Dfr;
+                if (this.errors.length === 0) {
+                    promise.resolve(this);
+                } else {
+                    let str = this.errors.map(error => {
+                        return `Command ${error.command} failed: ${error.error.message}`
+                    }).join('\n');
+                    promise.reject(new Error(str));
+                }
             }
             return this.promise as any;
         }
 
         let child = null;
         let options = this.commands.shift();
-        let command = ValueExtractor.interpolateAny(options.command, this.extracted);
+        let command: string = ValueExtractor.interpolateAny(options.command, this.extracted);
         let rgxReady = options.matchReady;
         let detached = options.detached === true;
         let silent = this.silent;
@@ -139,8 +148,15 @@ export class Shell extends class_EventEmitter {
         }
         try {
             let cwd = options.cwd;
-            if (cwd != null && Directory.exists(cwd + '/') === false) {
-                throw Error('CWD Directory not exists: ' + cwd);
+            if (cwd != null) {
+                let hasFileProtocol = cwd.startsWith('file:')
+                let cwdUri = hasFileProtocol ? cwd : 'file://' + cwd;
+                if (Directory.exists(cwdUri + '/') === false) {
+                    throw Error('CWD Directory not exists: ' + cwd);
+                }
+                if (hasFileProtocol) {
+                    cwd = new class_Uri(cwd).toLocalDir();
+                }
             }
             if (cwd == null) {
                 cwd = process.cwd()

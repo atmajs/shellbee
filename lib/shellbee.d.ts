@@ -15,7 +15,10 @@ declare module 'shellbee/Shell' {
     export type ProcessEventType = 'process_start' | 'process_exception' | 'process_exit' | 'process_ready' | 'process_stdout' | 'process_stderr';
     export class Shell extends class_EventEmitter {
         children: child_process.ChildProcessWithoutNullStreams[];
-        errors: any[];
+        errors: {
+            command: string;
+            error: Error;
+        }[];
         lastCode: number;
         silent: boolean;
         parallel: boolean;
