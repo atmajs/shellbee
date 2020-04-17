@@ -1,55 +1,69 @@
 import { path_ensure } from './path';
 import { ICommandOptions } from '../interface/ICommandOptions';
+import { IShellParams } from '../interface/IProcessParams';
 
-export function command_parseAll(commands, detachedAll, cwdAll, rgxReadyAll): ICommandOptions[] {
-    if (cwdAll != null) {
-        cwdAll = path_ensure(cwdAll, process.cwd());
-    }
-    return commands.reduce(function (aggr, command, index) {
+export function command_parseAll(
+    commands, 
+    $params: IShellParams
+): ICommandOptions[] {
+    let cwdAll = $params.cwd ?? process.cwd()
+    
+    cwdAll = path_ensure(cwdAll, process.cwd());
+    
+    return commands.reduce(function (out, command: string | ICommandOptions, index) {
 
-        var detached = detachedAll || false,
-            cwd = cwdAll || process.cwd(),
-            matchReady = rgxReadyAll,
-            extract = null,
-            exec;
+        // var detached = detachedAll || false,
+        //     //cwd = cwdAll || process.cwd(),
+        //     matchReady = rgxReadyAll,
+        //     extract = null;
 
-        if (typeof command === 'string') {
-            exec = command;
+        let opts: ICommandOptions = typeof command === 'string' ? <any> { exec: command } : command;
+        
+        if (opts.cwd) {
+            opts.cwd = path_ensure(opts.cwd, cwdAll ?? process.cwd());
         }
-        else if (command != null) {
-            var obj = command;
-            exec = obj.command;
-            if (obj.cwd) {
-                cwd = path_ensure(obj.cwd, cwd);
-            }
-            if (obj.detached) {
-                detached = obj.detached;
-            }
-            if (obj.matchReady) {
-                matchReady = obj.matchReady;
-            }
-            if (obj.extract) {
-                extract = obj.extract;
-            }
-        }
+        // if (typeof command === 'string') {
+        //     exec = command;
+        // }
+        // else if (command != null) {
+        //     var obj = command;
+        //     exec = obj.command;
+        //     if (obj.cwd) {
+                
+        //     }
+        //     if (obj.detached) {
+        //         detached = obj.detached;
+        //     }
+        //     if (obj.matchReady) {
+        //         matchReady = obj.matchReady;
+        //     }
+        //     if (obj.extract) {
+        //         extract = obj.extract;
+        //     }
+        //     if ('fork' in obj) {
+        //         fork = obj.fork;
+        //     }
+        // }
 
+        let exec = opts.exec;
         if (exec == null || exec === '') {
             console.warn('Command Object is not valid. Should be at least {command: string}');
-            return aggr;
+            return out;
         }
 
-        var args = command_parse(exec);
-        aggr.push({
+        let args = command_parse(exec);
+        out.push({
             exec: args.shift(),
             args: args,
-            cwd: cwd,
+            cwd: opts.cwd ?? cwdAll ?? process.cwd(),
             //stdio: 'pipe',
-            detached: detached,
+            detached: opts.detached ?? $params.detached ?? false,
             command: exec,
-            matchReady: matchReady,
-            extract: extract
+            matchReady: opts.matchReady ?? $params.matchReady,
+            extract: opts.extract,
+            fork: opts.fork ?? $params.fork ?? false
         });
-        return aggr;
+        return out;
 
     }, []);
 }

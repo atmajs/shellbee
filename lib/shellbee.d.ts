@@ -12,9 +12,10 @@ declare module 'shellbee/Shell' {
     import * as child_process from 'child_process';
     import { IShellParams } from 'shellbee/interface/IProcessParams';
     import { ICommandOptions } from 'shellbee/interface/ICommandOptions';
+    import { CommunicationChannel } from 'shellbee/CommunicationChannel';
     export type ProcessEventType = 'process_start' | 'process_exception' | 'process_exit' | 'process_ready' | 'process_stdout' | 'process_stderr';
     export class Shell extends class_EventEmitter {
-        children: child_process.ChildProcessWithoutNullStreams[];
+        children: child_process.ChildProcess[];
         errors: {
             command: string;
             error: Error;
@@ -22,17 +23,20 @@ declare module 'shellbee/Shell' {
         lastCode: number;
         silent: boolean;
         parallel: boolean;
+        currentOptions: ICommandOptions;
         commands: ICommandOptions[];
         results: ProcessResult[];
         extracted: {};
-        state: number;
+        state: ShellState;
         promise: Promise<Shell>;
         std: string[];
         stderr: string[];
         stdout: string[];
         start: Date;
         end: Date;
-        busy: boolean;
+        isBusy: boolean;
+        restartOnErrorExit: boolean;
+        channel: CommunicationChannel;
         constructor(params: IShellParams);
         static run(params: IShellParams): Promise<Shell>;
         run(): Promise<Shell>;
@@ -68,6 +72,12 @@ declare module 'shellbee/Shell' {
         error: Error;
         constructor(options: ICommandOptions);
     }
+    enum ShellState {
+        Empty = -1,
+        Initial = 0,
+        Started = 1
+    }
+    export {};
 }
 
 declare module 'shellbee/interface/IProcessParams' {
@@ -79,12 +89,18 @@ declare module 'shellbee/interface/IProcessParams' {
         matchReady?: RegExp;
         silent?: boolean;
         parallel?: boolean;
+        fork?: boolean;
+        restartOnErrorExit?: boolean;
+        verbose?: boolean;
+        timeoutMs?: number;
     }
     export interface IProcessSingleParams {
         command: string;
         cwd?: string;
         detached?: boolean;
         matchReady?: RegExp;
+        fork?: boolean;
+        restartOnError?: boolean;
         extract: {
             [key: string]: (output: string) => any;
         };
@@ -101,6 +117,26 @@ declare module 'shellbee/interface/ICommandOptions' {
         command: string;
         matchReady: RegExp;
         extract: IValueExtractors;
+        fork: boolean;
+        restartOnError: boolean;
+    }
+}
+
+declare module 'shellbee/CommunicationChannel' {
+    import { ChildProcess } from 'child_process';
+    export class CommunicationChannel {
+        child: ChildProcess;
+        awaiters: {
+            [id: string]: {
+                promise: any;
+                timestamp: any;
+            };
+        };
+        constructor(child: ChildProcess, timeoutMs: number);
+        call<T = any>(method: string, ...args: any[]): Promise<T>;
+        checkTimeout(): void;
+        onError(error: any): void;
+        onStdError(str: string): void;
     }
 }
 

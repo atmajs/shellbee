@@ -1,6 +1,6 @@
 # Shellbee
 
-> Yet another shell command executor (**cmd**, **bash**)
+> Yet another shell command executor (**cmd**, **bash**) and NodeJS fork with channel communication.
 
 ----
 [![Build Status](https://travis-ci.org/atmajs/shellbee.svg?branch=master)](https://travis-ci.org/atmajs/shellbee)
@@ -13,7 +13,7 @@ import { Shell } from 'shellbee'
 let shell: Shell = await Shell.run(command: IShellParams);
 
 // with callbacks
-let shell = new Shell({ command: 'node script.js'});
+let shell = new Shell({ command: `git commit -am "foo"` });
 
 interface IShellParams {
     command?: string | IProcessSingleParams
@@ -25,6 +25,13 @@ interface IShellParams {
     matchReady?: RegExp
     silent?: boolean
     parallel?: boolean
+
+    // command should container js file to fork
+    fork?: boolean
+
+    timeoutsMs?: number
+
+    restartOnErrorExit?: boolean
 }
 
 interface IProcessSingleParams {
@@ -62,4 +69,53 @@ interface IShell {
     onReady (cb: ({ command: string }) => void): this
     onComplete(cb: (shell: Shell) => void): this
 }
+```
+
+
+#### Communication channel
+
+```js
+
+let shell: Shell = await Shell.run({ command: 'bar.js', fork: true });
+
+shell.channel: ICommunicationChannel
+
+interface ICommunicationChannel {
+    child: ChildProdcrss
+    call <T> (method: string, ...args): Promise<T> 
+}
+```
+
+`call` methods sends a message to the child process:
+
+```
+{
+    id: string,
+    method: string
+    args: any[]
+}
+```
+
+The child process should process the work and sends a message with the `id` and result back to parent process:
+
+```
+{
+    id: string,
+    data?: any,
+    error?: Error
+}
+```
+
+Simple Forked file example:
+
+```js
+// worker.js
+process.on('message', async (message: { id, method, args }) => {
+    let result = await MyWorker.doWork(message.method, ...message.args);
+    process.send({
+        id: message.id,
+        data: result,
+        error: null
+    });
+});
 ```

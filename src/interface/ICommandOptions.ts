@@ -8,4 +8,6 @@ export interface ICommandOptions {
     command: string;
     matchReady: RegExp;
     extract: IValueExtractors;
+    fork: boolean;
+    restartOnError: boolean;
 }

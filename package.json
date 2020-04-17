@@ -1,6 +1,6 @@
 {
     "name": "shellbee",
-    "version": "0.5.2",
+    "version": "0.5.4",
     "main": "./lib/shellbee.js",
     "author": {
         "name": "Alex Kit",
@@ -14,7 +14,7 @@
         "@types/node": "^12.6.2",
         "app-bundler": "0.0.70",
         "atma": "^0.12.18",
-        "atma-loader-ts": "^1.1.11",
+        "atma-loader-ts": "^1.1.12",
         "dts-bundle": "^0.7.3"
     },
     "scripts": {

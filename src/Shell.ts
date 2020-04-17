@@ -5,6 +5,7 @@ import { command_parseAll } from './util/command';
 import { IShellParams } from './interface/IProcessParams';
 import { ICommandOptions } from './interface/ICommandOptions';
 import { ValueExtractor } from './ValueExtractor';
+import { CommunicationChannel } from './CommunicationChannel';
 
 export type ProcessEventType =
     'process_start' |
@@ -16,15 +17,17 @@ export type ProcessEventType =
 
 export class Shell extends class_EventEmitter {
 
-    children = [] as  child_process.ChildProcessWithoutNullStreams[]
+    children = [] as  child_process.ChildProcess[]
     errors = [] as { command: string, error: Error }[]
     lastCode: number = 0
     silent: boolean
     parallel: boolean
+
+    currentOptions: ICommandOptions
     commands: ICommandOptions[]
     results = [] as ProcessResult[]
     extracted = {}
-    state = 0
+    state = ShellState.Initial
     promise: Promise<Shell> = <any> new class_Dfr();
 
     std: string[] = [];
@@ -33,18 +36,18 @@ export class Shell extends class_EventEmitter {
 
     start: Date
     end: Date
-    busy = false
+    isBusy = false
+    restartOnErrorExit = false;
+    channel: CommunicationChannel
 
-    constructor(params: IShellParams) {
+    constructor(private params: IShellParams) {
         super();
 
-        let command = params.command || params.commands,
-            detached = params.detached || false,
-            cwd = params.cwd || process.cwd(),
-            rgxReady = params.matchReady;
+        let command = params.command ?? params.commands;
 
         this.silent = params.silent;
-        this.parallel = params.parallel || false;
+        this.parallel = params.parallel ?? false;
+        this.restartOnErrorExit = params.restartOnErrorExit ?? false;
 
         let commands = Array.isArray(command)
             ?   command
@@ -53,18 +56,21 @@ export class Shell extends class_EventEmitter {
 
         this.commands = command_parseAll(
             commands,
-            detached,
-            cwd,
-            rgxReady
+            params
         );
+
+        this.on('process_start', () => {
+            this.state = ShellState.Started;
+        });
     }
 
     static run (params: IShellParams): Promise<Shell> {
         return new Shell(params).run();
     }
     run (): Promise<Shell> {
-        if (this.busy === false) {
+        if (this.isBusy === false) {
             this.next();
+            return this.promise as any;
         }
         return this.promise as any;
     }
@@ -104,15 +110,22 @@ export class Shell extends class_EventEmitter {
         });
     }
     private next (): Promise<Shell> {
-        if (this.busy === false) {
+        if (this.isBusy === false) {
             this.start = new Date();
-            this.busy = true;
+            this.isBusy = true;
         }
+        if (this.lastCode > 0 && this.restartOnErrorExit) {
+            this.lastCode = 0;
+            this.commands.push(this.currentOptions);
+            this.next();
+            return this.promise;
+        }
+        
         if (this.commands.length === 0) {
-            if (this.state !== -1) {
-                this.state = -1;
+            if (this.state !== ShellState.Empty) {
+                this.state = ShellState.Empty;
                 this.end = new Date();
-                this.busy = false;
+                this.isBusy = false;
 
                 const promise = this.promise as any as class_Dfr;
                 if (this.errors.length === 0) {
@@ -138,14 +151,16 @@ export class Shell extends class_EventEmitter {
 
         let result = new ProcessResult(options);
         this.results.push(result);
+        this.currentOptions = options;
 
-        if (global.process.platform === 'win32') {
+        if (!options.fork && global.process.platform === 'win32') {
             if (options.exec !== 'cmd') {
 
                 options.args.unshift('/C', options.exec);
                 options.exec = 'cmd';
             }
         }
+
         try {
             let cwd = options.cwd;
             if (cwd != null) {
@@ -164,15 +179,26 @@ export class Shell extends class_EventEmitter {
 
             let exec = ValueExtractor.interpolateAny(options.exec, this.extracted);
             let args = ValueExtractor.interpolateAny(options.args, this.extracted);
+            let method = options.fork ? 'fork' : 'spawn';
 
-            child = child_process.spawn(exec, args, {
+            if (this.params.verbose) {
+                this.print(`${method}: ${exec} ${ args.join('')}`);
+            }
+
+            child = child_process[ options.fork ? 'fork' : 'spawn' ](exec, args, {
                 cwd: options.cwd || process.cwd(),
                 env: process.env,
                 stdio: stdio as any,
                 detached: detached
             });
+            if (options.fork) {
+                this.channel = new CommunicationChannel(child, this.params.timeoutMs ?? 10000);
+            }
             this.children.push(child);
         } catch (error) {
+            if (this.params.verbose) {
+                this.print('on start exception:', error);
+            }
 
             result.error = error;
 
@@ -187,8 +213,17 @@ export class Shell extends class_EventEmitter {
             return this.next();
         }
 
+        child.on('error', (error) => {
+            if (this.params.verbose) {
+                this.print('on error:', error);
+            }
+            this.channel?.onError(error);
+        });
         
         child.on('exit',  (code) => {
+            if (this.params.verbose) {
+                this.print('on exit:', code);
+            }
             result.resultCode = code;
 
             this.emit('process_exit', {
@@ -199,12 +234,15 @@ export class Shell extends class_EventEmitter {
             this.lastCode = code;
 
             if (code > 0) {
+                let msg = result.stderr.slice(-20).join('');
+                let err = new Error(`Exit code: ${code}. ${msg ?? ''}`)
                 this.errors.push({
                     command: command,
-                    error: new Error('Exit code: ' + code)
+                    error: err 
                 });
+                this.channel?.onError(err);
             }
-            extractor && extractor.complete();
+            extractor?.complete();
             this.next();
         });
 
@@ -249,7 +287,12 @@ export class Shell extends class_EventEmitter {
                 command: command,
                 buffer: buffer
             });
+
+            if (str.includes('UnhandledPromiseRejectionWarning')) {
+                this.channel?.onStdError(str);
+            }
         });
+
         this.emit('process_start', {
             command: command
         });
@@ -266,6 +309,9 @@ export class Shell extends class_EventEmitter {
         }
         return this.promise as any;
     }
+    private print (...args) {
+        console.log('Shellbee: ' + args.join(' '));
+    }
 };
 
 export class ProcessResult {
@@ -281,4 +327,10 @@ export class ProcessResult {
     constructor (public options: ICommandOptions) {
 
     }
+}
+
+enum ShellState {
+    Empty = -1,
+    Initial = 0,
+    Started = 1
 }
