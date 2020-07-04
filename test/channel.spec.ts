@@ -2,6 +2,9 @@ import { Shell } from '../src/Shell';
 
 
 UTest({
+    $config: {
+        timeout: 60 * 1000
+    },
     async 'should fork an echo process' () {
         let shell = new Shell({
             command: 'test/fixtures/fork.js',
@@ -92,8 +95,24 @@ UTest({
             has_(error.message, 'Exit code: 1');
         }
 
-        
+
         let result = await shell.channel.call('echo', 'g');
         eq_(result, 'echo:g');
+    },
+    async '!ipc' () {
+        let shell = new Shell({
+            command: 'node_modules/atma/atma run test/fixtures/ipc.ts',
+            //silent: true,
+            fork: true,
+            ipc: true,
+        });
+
+        shell.run();
+
+        let stra = await shell.send('getLetter', 'a');
+        eq_(stra, 'got: a');
+
+        let strb = await shell.send('getLetterAsync', 'b');
+        eq_(strb, 'got: b');
     }
 })

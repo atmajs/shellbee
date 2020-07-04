@@ -7,6 +7,7 @@ export interface IShellParams {
     silent?: boolean
     parallel?: boolean
     fork?: boolean
+    ipc?: boolean
     restartOnErrorExit?: boolean
     verbose?: boolean
     timeoutMs?: number
@@ -18,6 +19,7 @@ export interface IProcessSingleParams {
     detached?: boolean
     matchReady?: RegExp
     fork?: boolean
+    ipc?: boolean
     restartOnError?: boolean
     extract: {[ key: string ]: (output: string) => any }
 }

@@ -3,13 +3,13 @@ import { ICommandOptions } from '../interface/ICommandOptions';
 import { IShellParams } from '../interface/IProcessParams';
 
 export function command_parseAll(
-    commands, 
+    commands,
     $params: IShellParams
 ): ICommandOptions[] {
     let cwdAll = $params.cwd ?? process.cwd()
-    
+
     cwdAll = path_ensure(cwdAll, process.cwd());
-    
+
     return commands.reduce(function (out, command: string | ICommandOptions, index) {
 
         // var detached = detachedAll || false,
@@ -18,7 +18,7 @@ export function command_parseAll(
         //     extract = null;
 
         let opts: ICommandOptions = typeof command === 'string' ? <any> { exec: command } : command;
-        
+
         if (opts.cwd) {
             opts.cwd = path_ensure(opts.cwd, cwdAll ?? process.cwd());
         }
@@ -29,7 +29,7 @@ export function command_parseAll(
         //     var obj = command;
         //     exec = obj.command;
         //     if (obj.cwd) {
-                
+
         //     }
         //     if (obj.detached) {
         //         detached = obj.detached;
@@ -61,7 +61,8 @@ export function command_parseAll(
             command: exec,
             matchReady: opts.matchReady ?? $params.matchReady,
             extract: opts.extract,
-            fork: opts.fork ?? $params.fork ?? false
+            fork: opts.fork ?? $params.fork ?? false,
+            ipc: opts.ipc ?? $params.ipc ?? false,
         });
         return out;
 

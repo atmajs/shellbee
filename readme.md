@@ -1,6 +1,6 @@
 # Shellbee
 
-> Yet another shell command executor (**cmd**, **bash**) and NodeJS fork with channel communication.
+> Yet another shell command executor (**cmd**, **bash**) and NodeJS fork with Inter Process Communication (IPC).
 
 ----
 [![Build Status](https://travis-ci.org/atmajs/shellbee.svg?branch=master)](https://travis-ci.org/atmajs/shellbee)
@@ -28,6 +28,9 @@ interface IShellParams {
 
     // command should container js file to fork
     fork?: boolean
+
+    // Defines if a child_process supports IPC
+    ipc?: boolean
 
     timeoutsMs?: number
 
@@ -72,21 +75,49 @@ interface IShell {
 ```
 
 
-#### Communication channel
+## Communication channel
 
-```js
+#### Basic Configuration
 
-let shell: Shell = await Shell.run({ command: 'bar.js', fork: true });
+```ts
+// main.js
+import { Shell } from 'shellbee'
 
-shell.channel: ICommunicationChannel
-
-interface ICommunicationChannel {
-    child: ChildProdcrss
-    call <T> (method: string, ...args): Promise<T> 
-}
+let shell = new Shell({
+    command: 'bar.js',
+    fork: true,
+    ipc: true
+})
+shell.run();
+let result = await shell.send('doFoo', { foo: 1 });
 ```
 
-`call` methods sends a message to the child process:
+
+```ts
+// bar.js
+import { Shell } from 'shellbee'
+
+Shell.ipc({
+    doFoo (...args) {
+        console.log(args);
+        return 'lorem';
+    }
+});
+```
+
+
+#### Advanced Configuration
+
+1. Fork a process as usual.
+```js
+
+let shell = new Shell({ command: 'bar.js', fork: true });
+
+shell.run();
+
+```
+
+2. In the worker listen for a message
 
 ```
 {
@@ -119,3 +150,6 @@ process.on('message', async (message: { id, method, args }) => {
     });
 });
 ```
+
+
+----

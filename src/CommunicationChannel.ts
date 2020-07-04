@@ -1,7 +1,63 @@
 import { ChildProcess } from 'child_process';
-import { class_Dfr } from 'atma-utils';
+import { class_Dfr, obj_getProperty } from 'atma-utils';
 
 export class CommunicationChannel {
+
+    static ipc (handlers: { [method: string]: any }) {
+
+        process.on('message', (message: { id: string, method:string, args: any[] }) => {
+
+            const { id, method, args } = message;
+
+            let handler = obj_getProperty(handlers, method);
+            if (typeof handler !== 'function') {
+                process.send({
+                    id,
+                    error: new Error(`${method} not defined`)
+                })
+                return;
+            }
+
+            try {
+                let result = handler.apply(null, args);
+                if (result == null) {
+                    process.send({
+                        id,
+                        data: null
+                    });
+                    return;
+                }
+                if (typeof result.then === 'function') {
+                    result.then(data => {
+                        process.send({
+                            id,
+                            data
+                        });
+                    }, error => {
+                        process.send({
+                            id,
+                            error
+                        });
+                    });
+                    return;
+                }
+                process.send({
+                    id,
+                    data: result
+                });
+
+            } catch (error) {
+                process.send({
+                    id,
+                    error
+                });
+                return;
+            }
+
+        });
+
+        setTimeout(() => console.log('IPC Listening'), 10);
+    }
 
     awaiters: { [id: string]: { promise, timestamp } } = Object.create(null)
 
@@ -28,7 +84,7 @@ export class CommunicationChannel {
             timestamp: Date.now(),
             promise
         };
-       
+
         this.child.send({
             id,
             method,

@@ -15,6 +15,7 @@ declare module 'shellbee/Shell' {
     import { CommunicationChannel } from 'shellbee/CommunicationChannel';
     export type ProcessEventType = 'process_start' | 'process_exception' | 'process_exit' | 'process_ready' | 'process_stdout' | 'process_stderr';
     export class Shell extends class_EventEmitter {
+        static ipc: typeof CommunicationChannel.ipc;
         children: child_process.ChildProcess[];
         errors: {
             command: string;
@@ -35,6 +36,7 @@ declare module 'shellbee/Shell' {
         start: Date;
         end: Date;
         isBusy: boolean;
+        isReady: boolean;
         restartOnErrorExit: boolean;
         channel: CommunicationChannel;
         constructor(params: IShellParams);
@@ -62,6 +64,7 @@ declare module 'shellbee/Shell' {
         }) => void): this;
         onComplete(cb: (shell: Shell) => void): this;
         kill(): Promise<unknown>;
+        send<TOut = any>(method: string, ...args: any[]): Promise<TOut>;
     }
     export class ProcessResult {
         options: ICommandOptions;
@@ -90,6 +93,7 @@ declare module 'shellbee/interface/IProcessParams' {
         silent?: boolean;
         parallel?: boolean;
         fork?: boolean;
+        ipc?: boolean;
         restartOnErrorExit?: boolean;
         verbose?: boolean;
         timeoutMs?: number;
@@ -100,6 +104,7 @@ declare module 'shellbee/interface/IProcessParams' {
         detached?: boolean;
         matchReady?: RegExp;
         fork?: boolean;
+        ipc?: boolean;
         restartOnError?: boolean;
         extract: {
             [key: string]: (output: string) => any;
@@ -118,6 +123,7 @@ declare module 'shellbee/interface/ICommandOptions' {
         matchReady: RegExp;
         extract: IValueExtractors;
         fork: boolean;
+        ipc: boolean;
         restartOnError: boolean;
     }
 }
@@ -126,6 +132,9 @@ declare module 'shellbee/CommunicationChannel' {
     import { ChildProcess } from 'child_process';
     export class CommunicationChannel {
         child: ChildProcess;
+        static ipc(handlers: {
+            [method: string]: any;
+        }): void;
         awaiters: {
             [id: string]: {
                 promise: any;

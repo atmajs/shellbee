@@ -9,5 +9,6 @@ export interface ICommandOptions {
     matchReady: RegExp;
     extract: IValueExtractors;
     fork: boolean;
+    ipc: boolean;
     restartOnError: boolean;
 }

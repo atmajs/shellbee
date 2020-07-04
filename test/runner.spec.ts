@@ -15,7 +15,7 @@ UTest({
                 eq_(data.buffer, 'bar stderr');
             }))
             .on('process_exit', assert.await());
-        
+
         let result = await p.run();
 
         deepEq_(result.std, ['foo stdout', 'bar stderr']);

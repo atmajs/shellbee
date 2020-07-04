@@ -6,6 +6,7 @@ import { IShellParams } from './interface/IProcessParams';
 import { ICommandOptions } from './interface/ICommandOptions';
 import { ValueExtractor } from './ValueExtractor';
 import { CommunicationChannel } from './CommunicationChannel';
+import { events_someOnce } from './util/events';
 
 export type ProcessEventType =
     'process_start' |
@@ -16,6 +17,8 @@ export type ProcessEventType =
     'process_stderr';
 
 export class Shell extends class_EventEmitter {
+
+    static ipc = CommunicationChannel.ipc;
 
     children = [] as  child_process.ChildProcess[]
     errors = [] as { command: string, error: Error }[]
@@ -37,6 +40,7 @@ export class Shell extends class_EventEmitter {
     start: Date
     end: Date
     isBusy = false
+    isReady = false;
     restartOnErrorExit = false;
     channel: CommunicationChannel
 
@@ -109,18 +113,62 @@ export class Shell extends class_EventEmitter {
             child.kill('SIGINT');
         });
     }
+    send <TOut = any> (method: string, ...args: any[]): Promise<TOut> {
+        return new Promise((resolve, reject) => {
+            this.waitForChannel().then((channel: CommunicationChannel) => {
+                channel.call(method, ...args).then(resolve, reject);
+            }, reject)
+        });
+    }
+    private waitForChannel () {
+        if (this.currentOptions.ipc && this.isReady === false) {
+            return new Promise((resolve, reject) => {
+                events_someOnce(this, {
+                    'process_ready': () => {
+                        this.waitForChannel().then(resolve, reject);
+                    },
+                    'exit': () => {
+                        reject('Process exited');
+                    }
+                });
+            })
+        }
+        return new Promise((resolve, reject) => {
+            if (this.channel) {
+                resolve(this.channel);
+                return;
+            }
+            events_someOnce(this, {
+                'channel_created': () => {
+                    resolve(this.channel)
+                },
+                'exit': () => {
+                    reject('Process exited');
+                }
+            });
+        })
+    }
     private next (): Promise<Shell> {
         if (this.isBusy === false) {
             this.start = new Date();
             this.isBusy = true;
+            this.isReady = false;
         }
-        if (this.lastCode > 0 && this.restartOnErrorExit) {
+        if (this.channel) {
+            this.emit('channel_closed', {
+                channel: this.channel
+            });
+            if (this.commands.length !== 0 || (this.lastCode === 1 && this.restartOnErrorExit)) {
+                this.channel = null;
+            }
+        }
+        if (this.lastCode === 1 && this.restartOnErrorExit) {
             this.lastCode = 0;
             this.commands.push(this.currentOptions);
             this.next();
             return this.promise;
         }
-        
+
         if (this.commands.length === 0) {
             if (this.state !== ShellState.Empty) {
                 this.state = ShellState.Empty;
@@ -128,14 +176,15 @@ export class Shell extends class_EventEmitter {
                 this.isBusy = false;
 
                 const promise = this.promise as any as class_Dfr;
-                if (this.errors.length === 0) {
+                // Always resolve the promise, consumer should check for errors
+                //if (this.errors.length === 0) {
                     promise.resolve(this);
-                } else {
-                    let str = this.errors.map(error => {
-                        return `Command ${error.command} failed: ${error.error.message}`
-                    }).join('\n');
-                    promise.reject(new Error(str));
-                }
+                // } else {
+                //     let str = this.errors.map(error => {
+                //         return `Command ${error.command} failed: ${error.error.message}`
+                //     }).join('\n');
+                //     promise.reject(new Error(str));
+                // }
             }
             return this.promise as any;
         }
@@ -160,6 +209,10 @@ export class Shell extends class_EventEmitter {
                 options.exec = 'cmd';
             }
         }
+        if (rgxReady == null && options.ipc) {
+            rgxReady = /IPC Listening/i;
+        }
+        this.isReady = rgxReady == null;
 
         try {
             let cwd = options.cwd;
@@ -193,6 +246,9 @@ export class Shell extends class_EventEmitter {
             });
             if (options.fork) {
                 this.channel = new CommunicationChannel(child, this.params.timeoutMs ?? 10000);
+                this.emit('channel_created', {
+                    channel: this.channel
+                });
             }
             this.children.push(child);
         } catch (error) {
@@ -219,7 +275,7 @@ export class Shell extends class_EventEmitter {
             }
             this.channel?.onError(error);
         });
-        
+
         child.on('exit',  (code) => {
             if (this.params.verbose) {
                 this.print('on exit:', code);
@@ -238,7 +294,7 @@ export class Shell extends class_EventEmitter {
                 let err = new Error(`Exit code: ${code}. ${msg ?? ''}`)
                 this.errors.push({
                     command: command,
-                    error: err 
+                    error: err
                 });
                 this.channel?.onError(err);
             }
@@ -252,6 +308,7 @@ export class Shell extends class_EventEmitter {
             }
             if (rgxReady != null && rgxReady.test(buffer.toString())) {
                 rgxReady = null;
+                this.isReady = true;
                 this.emit('process_ready', {
                     command: command
                 });
@@ -275,7 +332,7 @@ export class Shell extends class_EventEmitter {
             if (detached !== true && silent !== true) {
                 process.stderr.write(buffer);
             }
-            
+
             let str = String(buffer);
             result.stderr.push(str);
             result.std.push(str);
