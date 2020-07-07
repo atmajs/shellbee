@@ -1,6 +1,6 @@
 {
     "name": "shellbee",
-    "version": "0.5.5",
+    "version": "0.5.7",
     "main": "./lib/shellbee.js",
     "author": {
         "name": "Alex Kit",
@@ -8,7 +8,7 @@
     },
     "dependencies": {
         "atma-io": "^1.2.26",
-        "atma-utils": "^0.1.28"
+        "atma-utils": "^0.1.38"
     },
     "devDependencies": {
         "@types/node": "^12.6.2",
