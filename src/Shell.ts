@@ -107,7 +107,7 @@ export class Shell extends class_EventEmitter {
         return new Promise(resolve => {
             var child = this.children.pop();
             if (child == null) {
-                return resolve();
+                return resolve(null);
             }
             this.once('process_exit', resolve);
             child.kill('SIGINT');

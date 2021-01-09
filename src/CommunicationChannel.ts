@@ -1,5 +1,6 @@
 import { ChildProcess } from 'child_process';
 import { class_Dfr, obj_getProperty } from 'atma-utils';
+import { serialize_error } from './util/serialize';
 
 export class CommunicationChannel {
 
@@ -13,7 +14,7 @@ export class CommunicationChannel {
             if (typeof handler !== 'function') {
                 process.send({
                     id,
-                    error: new Error(`${method} not defined`)
+                    error: serialize_error(new Error(`${method} not defined`))
                 })
                 return;
             }
@@ -36,7 +37,7 @@ export class CommunicationChannel {
                     }, error => {
                         process.send({
                             id,
-                            error
+                            error: serialize_error(error),
                         });
                     });
                     return;
@@ -49,7 +50,7 @@ export class CommunicationChannel {
             } catch (error) {
                 process.send({
                     id,
-                    error
+                    error: serialize_error(error),
                 });
                 return;
             }
