@@ -14,7 +14,38 @@ declare module 'shellbee/Shell' {
     import { ICommandOptions } from 'shellbee/interface/ICommandOptions';
     import { CommunicationChannel } from 'shellbee/CommunicationChannel';
     export type ProcessEventType = 'process_start' | 'process_exception' | 'process_exit' | 'process_ready' | 'process_stdout' | 'process_stderr';
-    export class Shell extends class_EventEmitter {
+    export interface IProcessEvents {
+        process_start(data: {
+            command: string;
+        }): any;
+        process_exception(data: {
+            command: string;
+            error: Error | string;
+        }): any;
+        process_exit(data: {
+            command: string;
+            code: number;
+            result: ProcessResult;
+        }): any;
+        process_ready(data: {
+            command: string;
+        }): any;
+        process_stdout(data: {
+            command: string;
+            buffer: Buffer | string;
+        }): any;
+        process_stderr(data: {
+            command: string;
+            buffer: Buffer | string;
+        }): any;
+        channel_closed(data: {
+            channel: CommunicationChannel;
+        }): any;
+        channel_created(data: {
+            channel: CommunicationChannel;
+        }): any;
+    }
+    export class Shell extends class_EventEmitter<IProcessEvents> {
         static ipc: typeof CommunicationChannel.ipc;
         children: child_process.ChildProcess[];
         errors: {
@@ -63,7 +94,7 @@ declare module 'shellbee/Shell' {
             command: any;
         }) => void): this;
         onComplete(cb: (shell: Shell) => void): this;
-        kill(): Promise<unknown>;
+        kill(signal?: string): Promise<unknown>;
         send<TOut = any>(method: string, ...args: any[]): Promise<TOut>;
     }
     export class ProcessResult {
@@ -133,7 +164,7 @@ declare module 'shellbee/CommunicationChannel' {
     export class CommunicationChannel {
         child: ChildProcess;
         static ipc(handlers: {
-            [method: string]: any;
+            [method: string]: (...args: any[]) => void | Promise<any>;
         }): void;
         awaiters: {
             [id: string]: {

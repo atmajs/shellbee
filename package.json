@@ -1,6 +1,6 @@
 {
     "name": "shellbee",
-    "version": "0.5.8",
+    "version": "0.5.9",
     "main": "./lib/shellbee.js",
     "author": {
         "name": "Alex Kit",

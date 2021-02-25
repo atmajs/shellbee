@@ -16,7 +16,35 @@ export type ProcessEventType =
     'process_stdout' |
     'process_stderr';
 
-export class Shell extends class_EventEmitter {
+export interface IProcessEvents {
+    process_start (data: { command: string })
+    process_exception (data: {
+        command: string
+        error: Error | string
+    })
+    process_exit(data: {
+        command: string
+        code: number
+        result: ProcessResult
+    })
+    process_ready(data: { command: string })
+    process_stdout(data: {
+        command: string
+        buffer: Buffer | string
+    })
+    process_stderr(data: {
+        command: string
+        buffer: Buffer | string
+    })
+    channel_closed (data: {
+        channel: CommunicationChannel
+    })
+    channel_created (data: {
+        channel: CommunicationChannel
+    })
+}
+
+export class Shell extends class_EventEmitter<IProcessEvents> {
 
     static ipc = CommunicationChannel.ipc;
 
@@ -103,14 +131,14 @@ export class Shell extends class_EventEmitter {
         return this;
     }
 
-    kill () {
+    kill (signal = 'SIGINT') {
         return new Promise(resolve => {
             var child = this.children.pop();
             if (child == null) {
                 return resolve(null);
             }
             this.once('process_exit', resolve);
-            child.kill('SIGINT');
+            child.kill(signal);
         });
     }
     send <TOut = any> (method: string, ...args: any[]): Promise<TOut> {

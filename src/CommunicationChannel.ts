@@ -4,7 +4,7 @@ import { serialize_error } from './util/serialize';
 
 export class CommunicationChannel {
 
-    static ipc (handlers: { [method: string]: any }) {
+    static ipc (handlers: { [method: string]: (...args) => void | Promise<any> }) {
 
         process.on('message', (message: { id: string, method:string, args: any[] }) => {
 
