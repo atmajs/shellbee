@@ -121,8 +121,8 @@ export class Shell extends class_EventEmitter<IProcessEvents> {
     }
     /** When rgxReady is specified the event will be called */
     onReady (cb: ({ command: string }) => void): this {
-        if (this.commands.some(x => x.matchReady) === false) {
-            console.error('Ready Matcher is not defined');
+        if (!this.currentOptions?.matchReady && this.commands.some(x => x.matchReady) === false) {
+            console.error('Ready Matcher Regex is not defined', this.currentOptions?.command ?? this.commands?.[0]?.command);
         }
         return this.on('process_ready', cb);
     }
