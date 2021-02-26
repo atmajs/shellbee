@@ -1,6 +1,6 @@
 {
     "name": "shellbee",
-    "version": "0.5.10",
+    "version": "0.5.11",
     "main": "./lib/shellbee.js",
     "author": {
         "name": "Alex Kit",
@@ -8,7 +8,8 @@
     },
     "dependencies": {
         "atma-io": "^1.2.26",
-        "atma-utils": "^0.1.38"
+        "atma-utils": "^0.1.38",
+        "tree-kill": "^1.2.2"
     },
     "devDependencies": {
         "@types/node": "^12.6.2",
@@ -46,7 +47,8 @@
             "atma-io",
             "atma-utils",
             "^path$",
-            "child_process"
+            "child_process",
+            "tree-kill"
         ],
         "middlewares": {
             "ts": [

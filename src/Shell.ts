@@ -7,6 +7,7 @@ import { ICommandOptions } from './interface/ICommandOptions';
 import { ValueExtractor } from './ValueExtractor';
 import { CommunicationChannel } from './CommunicationChannel';
 import { events_someOnce } from './util/events';
+import treeKill from 'tree-kill';
 
 export type ProcessEventType =
     'process_start' |
@@ -17,8 +18,8 @@ export type ProcessEventType =
     'process_stderr';
 
 export interface IProcessEvents {
-    process_start (data: { command: string })
-    process_exception (data: {
+    process_start(data: { command: string })
+    process_exception(data: {
         command: string
         error: Error | string
     })
@@ -36,10 +37,10 @@ export interface IProcessEvents {
         command: string
         buffer: Buffer | string
     })
-    channel_closed (data: {
+    channel_closed(data: {
         channel: CommunicationChannel
     })
-    channel_created (data: {
+    channel_created(data: {
         channel: CommunicationChannel
     })
 }
@@ -48,7 +49,7 @@ export class Shell extends class_EventEmitter<IProcessEvents> {
 
     static ipc = CommunicationChannel.ipc;
 
-    children = [] as  child_process.ChildProcess[]
+    children = [] as child_process.ChildProcess[]
     errors = [] as { command: string, error: Error }[]
     lastCode: number = 0
     silent: boolean
@@ -59,7 +60,7 @@ export class Shell extends class_EventEmitter<IProcessEvents> {
     results = [] as ProcessResult[]
     extracted = {}
     state = ShellState.Initial
-    promise: Promise<Shell> = <any> new class_Dfr();
+    promise: Promise<Shell> = <any>new class_Dfr();
 
     std: string[] = [];
     stderr: string[] = [];
@@ -82,8 +83,8 @@ export class Shell extends class_EventEmitter<IProcessEvents> {
         this.restartOnErrorExit = params.restartOnErrorExit ?? false;
 
         let commands = Array.isArray(command)
-            ?   command
-            : [ command ]
+            ? command
+            : [command]
             ;
 
         this.commands = command_parseAll(
@@ -96,10 +97,10 @@ export class Shell extends class_EventEmitter<IProcessEvents> {
         });
     }
 
-    static run (params: IShellParams): Promise<Shell> {
+    static run(params: IShellParams): Promise<Shell> {
         return new Shell(params).run();
     }
-    run (): Promise<Shell> {
+    run(): Promise<Shell> {
         if (this.isBusy === false) {
             this.next();
             return this.promise as any;
@@ -107,33 +108,38 @@ export class Shell extends class_EventEmitter<IProcessEvents> {
         return this.promise as any;
     }
 
-    onStart (cb: (data: { command: string }) => void): this {
+    onStart(cb: (data: { command: string }) => void): this {
         return this.on('process_start', cb);
     }
-    onStdout (cb: (data: { command: string, buffer: string }) => void): this {
+    onStdout(cb: (data: { command: string, buffer: string }) => void): this {
         return this.on('process_stdout', cb);
     }
-    onStderr (cb: (data: { command: string, buffer: string }) => void): this {
+    onStderr(cb: (data: { command: string, buffer: string }) => void): this {
         return this.on('process_stderr', cb);
     }
-    onExit (cb: (data: { command: string, code: number, result: ProcessResult }) => void): this {
+    onExit(cb: (data: { command: string, code: number, result: ProcessResult }) => void): this {
         return this.on('process_exit', cb);
     }
     /** When rgxReady is specified the event will be called */
-    onReady (cb: ({ command: string }) => void): this {
+    onReady(cb: ({ command: string }) => void): this {
         if (!this.currentOptions?.matchReady && this.commands.some(x => x.matchReady) === false) {
             console.error('Ready Matcher Regex is not defined', this.currentOptions?.command ?? this.commands?.[0]?.command);
         }
         return this.on('process_ready', cb);
+    }
+    onReadyAsync (): Promise<{ command: string}> {
+        return new Promise(resolve => {
+            this.onReady(resolve);
+        });
     }
     onComplete(cb: (shell: Shell) => void): this {
         (this.promise as any).always(() => cb(this));
         return this;
     }
 
-    kill (signal = 'SIGINT') {
+    kill(signal = 'SIGINT') {
         return new Promise(resolve => {
-            var child = this.children.pop();
+            let child = this.children.pop();
             if (child == null) {
                 return resolve(null);
             }
@@ -141,14 +147,26 @@ export class Shell extends class_EventEmitter<IProcessEvents> {
             child.kill(signal);
         });
     }
-    send <TOut = any> (method: string, ...args: any[]): Promise<TOut> {
+    /** Uses tree-kill to terminate the tree */
+    terminate() {
+        return new Promise(resolve => {
+            let child = this.children.pop();
+            if (child == null) {
+                return resolve(null);
+            }
+            this.once('process_exit', resolve);
+            treeKill(child.pid);
+        });
+    }
+
+    send<TOut = any>(method: string, ...args: any[]): Promise<TOut> {
         return new Promise((resolve, reject) => {
             this.waitForChannel().then((channel: CommunicationChannel) => {
                 channel.call(method, ...args).then(resolve, reject);
             }, reject)
         });
     }
-    private waitForChannel () {
+    private waitForChannel() {
         if (this.currentOptions.ipc && this.isReady === false) {
             return new Promise((resolve, reject) => {
                 events_someOnce(this, {
@@ -176,7 +194,7 @@ export class Shell extends class_EventEmitter<IProcessEvents> {
             });
         })
     }
-    private next (): Promise<Shell> {
+    private next(): Promise<Shell> {
         if (this.isBusy === false) {
             this.start = new Date();
             this.isBusy = true;
@@ -206,7 +224,7 @@ export class Shell extends class_EventEmitter<IProcessEvents> {
                 const promise = this.promise as any as class_Dfr;
                 // Always resolve the promise, consumer should check for errors
                 //if (this.errors.length === 0) {
-                    promise.resolve(this);
+                promise.resolve(this);
                 // } else {
                 //     let str = this.errors.map(error => {
                 //         return `Command ${error.command} failed: ${error.error.message}`
@@ -263,10 +281,10 @@ export class Shell extends class_EventEmitter<IProcessEvents> {
             let method = options.fork ? 'fork' : 'spawn';
 
             if (this.params.verbose) {
-                this.print(`${method}: ${exec} ${ args.join('')}`);
+                this.print(`${method}: ${exec} ${args.join('')}`);
             }
 
-            child = child_process[ options.fork ? 'fork' : 'spawn' ](exec, args, {
+            child = child_process[options.fork ? 'fork' : 'spawn'](exec, args, {
                 cwd: options.cwd || process.cwd(),
                 env: process.env,
                 stdio: stdio as any,
@@ -304,7 +322,7 @@ export class Shell extends class_EventEmitter<IProcessEvents> {
             this.channel?.onError(error);
         });
 
-        child.on('exit',  (code) => {
+        child.on('exit', (code) => {
             if (this.params.verbose) {
                 this.print('on exit:', code);
             }
@@ -330,7 +348,7 @@ export class Shell extends class_EventEmitter<IProcessEvents> {
             this.next();
         });
 
-        child.stdout.on('data',  (buffer) => {
+        child.stdout.on('data', (buffer) => {
             if (detached !== true && silent !== true) {
                 process.stdout.write(buffer);
             }
@@ -356,7 +374,7 @@ export class Shell extends class_EventEmitter<IProcessEvents> {
                 buffer: buffer
             });
         });
-        child.stderr.on('data',  (buffer) => {
+        child.stderr.on('data', (buffer) => {
             if (detached !== true && silent !== true) {
                 process.stderr.write(buffer);
             }
@@ -394,7 +412,7 @@ export class Shell extends class_EventEmitter<IProcessEvents> {
         }
         return this.promise as any;
     }
-    private print (...args) {
+    private print(...args) {
         console.log('Shellbee: ' + args.join(' '));
     }
 };
@@ -409,7 +427,7 @@ export class ProcessResult {
 
     error: Error = null
 
-    constructor (public options: ICommandOptions) {
+    constructor(public options: ICommandOptions) {
 
     }
 }

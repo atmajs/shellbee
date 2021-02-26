@@ -93,8 +93,13 @@ declare module 'shellbee/Shell' {
         onReady(cb: ({ command: string }: {
             command: any;
         }) => void): this;
+        onReadyAsync(): Promise<{
+            command: string;
+        }>;
         onComplete(cb: (shell: Shell) => void): this;
         kill(signal?: string): Promise<unknown>;
+        /** Uses tree-kill to terminate the tree */
+        terminate(): Promise<unknown>;
         send<TOut = any>(method: string, ...args: any[]): Promise<TOut>;
     }
     export class ProcessResult {
