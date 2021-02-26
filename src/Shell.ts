@@ -7,7 +7,7 @@ import { ICommandOptions } from './interface/ICommandOptions';
 import { ValueExtractor } from './ValueExtractor';
 import { CommunicationChannel } from './CommunicationChannel';
 import { events_someOnce } from './util/events';
-import treeKill from 'tree-kill';
+import * as treeKill from 'tree-kill';
 
 export type ProcessEventType =
     'process_start' |
@@ -155,7 +155,7 @@ export class Shell extends class_EventEmitter<IProcessEvents> {
                 return resolve(null);
             }
             this.once('process_exit', resolve);
-            treeKill(child.pid);
+            (treeKill as any)(child.pid);
         });
     }
 

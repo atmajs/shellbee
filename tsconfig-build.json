@@ -10,6 +10,7 @@
         "module": "commonjs",
         "sourceMap": false,
         "experimentalDecorators": true,
-        "esModuleInterop": true
+        "esModuleInterop": true,
+        "allowSyntheticDefaultImports": true,
     }
 }
