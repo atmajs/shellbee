@@ -99,9 +99,9 @@ UTest({
         let result = await shell.channel.call('echo', 'g');
         eq_(result, 'echo:g');
     },
-    async '!ipc' () {
+    async 'ipc' () {
         let shell = new Shell({
-            command: 'node_modules/atma/atma run test/fixtures/ipc.ts',
+            command: './node_modules/atma/atma run test/fixtures/ipc.ts',
             //silent: true,
             fork: true,
             ipc: true,

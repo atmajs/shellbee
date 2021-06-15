@@ -97,7 +97,7 @@ declare module 'shellbee/Shell' {
             command: string;
         }>;
         onComplete(cb: (shell: Shell) => void): this;
-        kill(signal?: string): Promise<unknown>;
+        kill(signal?: number | NodeJS.Signals): Promise<unknown>;
         /** Uses tree-kill to terminate the tree */
         terminate(): Promise<unknown>;
         send<TOut = any>(method: string, ...args: any[]): Promise<TOut>;

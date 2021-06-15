@@ -93,5 +93,10 @@ function command_parse(command: string) {
             }
         }
     }
+
+    // On windows normalize executable command path to backward slashes
+    if (global.process.platform === 'win32') {
+        parts[0] = parts[0].replace(/\//g, '\\');
+    }
     return parts;
 }

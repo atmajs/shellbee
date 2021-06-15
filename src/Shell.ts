@@ -137,7 +137,7 @@ export class Shell extends class_EventEmitter<IProcessEvents> {
         return this;
     }
 
-    kill(signal = 'SIGINT') {
+    kill(signal: number | NodeJS.Signals = 'SIGINT') {
         return new Promise(resolve => {
             let child = this.children.pop();
             if (child == null) {
@@ -284,12 +284,20 @@ export class Shell extends class_EventEmitter<IProcessEvents> {
                 this.print(`${method}: ${exec} ${args.join('')}`);
             }
 
-            child = child_process[options.fork ? 'fork' : 'spawn'](exec, args, {
-                cwd: options.cwd || process.cwd(),
-                env: process.env,
-                stdio: stdio as any,
-                detached: detached
-            });
+            child = options.fork
+                ? child_process.fork(exec, args, {
+                    cwd: options.cwd || process.cwd(),
+                    env: process.env,
+                    stdio: stdio as any,
+                    detached: detached
+                })
+                : child_process.spawn(exec, args, {
+                    cwd: options.cwd || process.cwd(),
+                    env: process.env,
+                    stdio: stdio as any,
+                    detached: detached
+                });
+
             if (options.fork) {
                 this.channel = new CommunicationChannel(child, this.params.timeoutMs ?? 10000);
                 this.emit('channel_created', {
