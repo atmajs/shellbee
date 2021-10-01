@@ -13,7 +13,7 @@ export namespace ShellWrapperUtil {
         }
         let [exec, ...rest] = config.shell as string[];
 
-        return [ ...args, exec, ...rest ];
+        return [ exec, ...rest, ...args ];
     }
 
     export function wrap(command: string, config: IShellParams): string {
