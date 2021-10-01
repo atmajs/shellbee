@@ -1,4 +1,5 @@
 import { is_Function } from 'atma-utils';
+import { ICommandOptions } from './interface/ICommandOptions';
 import { IValueExtractors } from './interface/IValueExtractors';
 export class ValueExtractor {
     private string = '';
@@ -20,23 +21,24 @@ export class ValueExtractor {
             return mix(str);
         }
     }
-    static interpolateAny(mix, values) {
-        if (mix == null) {
-            return;
+    static interpolateAny(mix: string | string[], values: Object, options?: ICommandOptions) {
+        if (mix == null || options?.interpolate === false) {
+            return mix;
         }
         if (typeof mix === 'string') {
             return ValueExtractor.interpolateStr(mix, values);
         }
         if (typeof mix.map === 'function') {
+            // isArrayLike
             return mix.map(function (str) {
-                return ValueExtractor.interpolateAny(str, values);
+                return ValueExtractor.interpolateAny(str, values, options);
             });
         }
         return mix;
     }
-    static interpolateStr(str, values) {
+    static interpolateStr(str: string, values: Object) {
         return str.replace(/\{\{(\w+)\}\}/g, function (full, prop) {
-            var val = values[prop];
+            let val = values[prop];
             if (val == null) {
                 console.warn('Extracted property expected: ', prop, values);
                 return '';

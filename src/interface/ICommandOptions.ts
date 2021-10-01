@@ -11,4 +11,10 @@ export interface ICommandOptions {
     fork: boolean;
     ipc: boolean;
     restartOnError: boolean;
+
+    /**
+     * Command will be interpolated using extracted values from prev command
+     * $ cd {{path}}
+     **/
+    interpolate?: boolean
 }

@@ -1,9 +1,15 @@
 # Shellbee
 
+<p align='center'>
+    <img src='assets/background.jpg'/>
+</p>
+
+----
 > Yet another shell command executor (**cmd**, **bash**) and NodeJS fork with Inter Process Communication (IPC).
 
 ----
-[![Build Status](https://travis-ci.org/atmajs/shellbee.svg?branch=master)](https://travis-ci.org/atmajs/shellbee)
+
+[![Build Status](https://travis-ci.com/atmajs/shellbee.svg?branch=master)](https://travis-ci.com/atmajs/shellbee)
 [![NPM version](https://badge.fury.io/js/shellbee.svg)](http://badge.fury.io/js/shellbee)
 
 

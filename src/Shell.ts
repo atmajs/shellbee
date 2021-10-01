@@ -8,6 +8,8 @@ import { ValueExtractor } from './ValueExtractor';
 import { CommunicationChannel } from './CommunicationChannel';
 import { events_someOnce } from './util/events';
 import * as treeKill from 'tree-kill';
+import { ShellParamsUtil } from './util/ShellParamsUtil';
+
 
 export type ProcessEventType =
     'process_start' |
@@ -52,8 +54,6 @@ export class Shell extends class_EventEmitter<IProcessEvents> {
     children = [] as child_process.ChildProcess[]
     errors = [] as { command: string, error: Error }[]
     lastCode: number = 0
-    silent: boolean
-    parallel: boolean
 
     currentOptions: ICommandOptions
     commands: ICommandOptions[]
@@ -70,25 +70,16 @@ export class Shell extends class_EventEmitter<IProcessEvents> {
     end: Date
     isBusy = false
     isReady = false;
-    restartOnErrorExit = false;
     channel: CommunicationChannel
+    params: IShellParams;
 
-    constructor(private params: IShellParams) {
+    constructor(params: IShellParams) {
         super();
 
-        let command = params.command ?? params.commands;
-
-        this.silent = params.silent;
-        this.parallel = params.parallel ?? false;
-        this.restartOnErrorExit = params.restartOnErrorExit ?? false;
-
-        let commands = Array.isArray(command)
-            ? command
-            : [command]
-            ;
+        this.params = ShellParamsUtil.normalize(params);
 
         this.commands = command_parseAll(
-            commands,
+            params.commands,
             params
         );
 
@@ -106,6 +97,18 @@ export class Shell extends class_EventEmitter<IProcessEvents> {
             return this.promise as any;
         }
         return this.promise as any;
+    }
+
+    static factory(config: IShellParams): Pick<typeof Shell, 'run'> {
+
+        return {
+            run (params: IShellParams) {
+                return Shell.run({
+                    ...config,
+                    ...params,
+                });
+            }
+        }
     }
 
     onStart(cb: (data: { command: string }) => void): this {
@@ -136,7 +139,11 @@ export class Shell extends class_EventEmitter<IProcessEvents> {
         (this.promise as any).always(() => cb(this));
         return this;
     }
-
+    onCompleteAsync (): Promise<this> {
+        return new Promise((resolve) => {
+            resolve(this);
+        });
+    }
     kill(signal: number | NodeJS.Signals = 'SIGINT') {
         return new Promise(resolve => {
             let child = this.children.pop();
@@ -204,11 +211,11 @@ export class Shell extends class_EventEmitter<IProcessEvents> {
             this.emit('channel_closed', {
                 channel: this.channel
             });
-            if (this.commands.length !== 0 || (this.lastCode === 1 && this.restartOnErrorExit)) {
+            if (this.commands.length !== 0 || (this.lastCode === 1 && this.params.restartOnErrorExit)) {
                 this.channel = null;
             }
         }
-        if (this.lastCode === 1 && this.restartOnErrorExit) {
+        if (this.lastCode === 1 && this.params.restartOnErrorExit) {
             this.lastCode = 0;
             this.commands.push(this.currentOptions);
             this.next();
@@ -223,14 +230,7 @@ export class Shell extends class_EventEmitter<IProcessEvents> {
 
                 const promise = this.promise as any as class_Dfr;
                 // Always resolve the promise, consumer should check for errors
-                //if (this.errors.length === 0) {
                 promise.resolve(this);
-                // } else {
-                //     let str = this.errors.map(error => {
-                //         return `Command ${error.command} failed: ${error.error.message}`
-                //     }).join('\n');
-                //     promise.reject(new Error(str));
-                // }
             }
             return this.promise as any;
         }
@@ -240,7 +240,7 @@ export class Shell extends class_EventEmitter<IProcessEvents> {
         let command: string = ValueExtractor.interpolateAny(options.command, this.extracted);
         let rgxReady = options.matchReady;
         let detached = options.detached === true;
-        let silent = this.silent;
+        let silent = this.params.silent;
         let stdio = detached ? (void 0) : 'pipe';
         let extractor = options.extract ? new ValueExtractor(this.extracted, options.extract) : null;
 
@@ -276,8 +276,8 @@ export class Shell extends class_EventEmitter<IProcessEvents> {
                 cwd = process.cwd()
             }
 
-            let exec = ValueExtractor.interpolateAny(options.exec, this.extracted);
-            let args = ValueExtractor.interpolateAny(options.args, this.extracted);
+            let exec = ValueExtractor.interpolateAny(options.exec, this.extracted, options);
+            let args = ValueExtractor.interpolateAny(options.args, this.extracted, options);
             let method = options.fork ? 'fork' : 'spawn';
 
             if (this.params.verbose) {
@@ -408,7 +408,7 @@ export class Shell extends class_EventEmitter<IProcessEvents> {
             command: command
         });
 
-        if (this.parallel !== false) {
+        if (this.params.parallel !== false) {
             this.next();
         }
         if (rgxReady == null) {

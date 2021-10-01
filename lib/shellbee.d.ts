@@ -53,8 +53,6 @@ declare module 'shellbee/Shell' {
             error: Error;
         }[];
         lastCode: number;
-        silent: boolean;
-        parallel: boolean;
         currentOptions: ICommandOptions;
         commands: ICommandOptions[];
         results: ProcessResult[];
@@ -68,11 +66,12 @@ declare module 'shellbee/Shell' {
         end: Date;
         isBusy: boolean;
         isReady: boolean;
-        restartOnErrorExit: boolean;
         channel: CommunicationChannel;
+        params: IShellParams;
         constructor(params: IShellParams);
         static run(params: IShellParams): Promise<Shell>;
         run(): Promise<Shell>;
+        static factory(config: IShellParams): Pick<typeof Shell, 'run'>;
         onStart(cb: (data: {
             command: string;
         }) => void): this;
@@ -97,6 +96,7 @@ declare module 'shellbee/Shell' {
             command: string;
         }>;
         onComplete(cb: (shell: Shell) => void): this;
+        onCompleteAsync(): Promise<this>;
         kill(signal?: number | NodeJS.Signals): Promise<unknown>;
         /** Uses tree-kill to terminate the tree */
         terminate(): Promise<unknown>;
@@ -133,6 +133,11 @@ declare module 'shellbee/interface/IProcessParams' {
         restartOnErrorExit?: boolean;
         verbose?: boolean;
         timeoutMs?: number;
+        /**
+         * Command shell wrapper, e.g. ""c:\\Program Files\\Git\\bin\\bash.exe" -c "%COMMAND%"
+         * or shell prefix like ["cmd.exe", "/C"]
+         */
+        shell?: string | string[];
     }
     export interface IProcessSingleParams {
         command: string;
@@ -161,6 +166,11 @@ declare module 'shellbee/interface/ICommandOptions' {
         fork: boolean;
         ipc: boolean;
         restartOnError: boolean;
+        /**
+          * Command will be interpolated using extracted values from prev command
+          * $ cd {{path}}
+          **/
+        interpolate?: boolean;
     }
 }
 
