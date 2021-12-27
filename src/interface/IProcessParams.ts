@@ -9,7 +9,12 @@ export interface IShellParams {
     parallel?: boolean
     fork?: boolean
     ipc?: boolean
-    restartOnErrorExit?: boolean
+    restartOnErrorExit?: boolean | {
+        delayMs?: number
+        maxRestartTimespanMs?: number
+        maxRestartCount?: number
+    }
+
     verbose?: boolean
     timeoutMs?: number
 

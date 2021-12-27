@@ -9,6 +9,7 @@ import { CommunicationChannel } from './CommunicationChannel';
 import { events_someOnce } from './util/events';
 import * as treeKill from 'tree-kill';
 import { ShellParamsUtil } from './util/ShellParamsUtil';
+import { ShellErrorExitsHandler } from './util/ShellErrorExitsHandler';
 
 
 export type ProcessEventType =
@@ -49,6 +50,8 @@ export interface IProcessEvents {
 
 export class Shell extends class_EventEmitter<IProcessEvents> {
 
+    private errorsHandler: ShellErrorExitsHandler;
+
     static ipc = CommunicationChannel.ipc;
 
     children = [] as child_process.ChildProcess[]
@@ -77,6 +80,7 @@ export class Shell extends class_EventEmitter<IProcessEvents> {
         super();
 
         this.params = ShellParamsUtil.normalize(params);
+        this.errorsHandler = new ShellErrorExitsHandler(this.params);
 
         this.commands = command_parseAll(
             params.commands,
@@ -141,7 +145,7 @@ export class Shell extends class_EventEmitter<IProcessEvents> {
     }
     onCompleteAsync (): Promise<this> {
         return new Promise((resolve) => {
-            resolve(this);
+            this.onComplete(resolve as any)
         });
     }
     kill(signal: number | NodeJS.Signals = 'SIGINT') {
@@ -211,14 +215,16 @@ export class Shell extends class_EventEmitter<IProcessEvents> {
             this.emit('channel_closed', {
                 channel: this.channel
             });
-            if (this.commands.length !== 0 || (this.lastCode === 1 && this.params.restartOnErrorExit)) {
+            if (this.commands.length !== 0 || (this.lastCode === 1 && this.errorsHandler.isActive())) {
                 this.channel = null;
             }
         }
-        if (this.lastCode === 1 && this.params.restartOnErrorExit) {
+        if (this.lastCode === 1 && this.errorsHandler.isActive()) {
             this.lastCode = 0;
             this.commands.push(this.currentOptions);
-            this.next();
+            this.errorsHandler.delay(() => {
+                this.next();
+            });
             return this.promise;
         }
 

@@ -125,7 +125,7 @@ shell.run();
 
 2. In the worker listen for a message
 
-```
+```ts
 {
     id: string,
     method: string
@@ -135,7 +135,7 @@ shell.run();
 
 The child process should process the work and sends a message with the `id` and result back to parent process:
 
-```
+```ts
 {
     id: string,
     data?: any,

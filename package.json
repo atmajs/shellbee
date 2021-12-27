@@ -1,7 +1,10 @@
 {
     "name": "shellbee",
-    "version": "0.5.16",
+    "version": "0.5.17",
     "main": "./lib/shellbee.js",
+    "bin": {
+        "shellbee": "index.js"
+    },
     "author": {
         "name": "Alex Kit",
         "email": "alex.kit@atmajs.com"
@@ -29,33 +32,43 @@
         "server": "atma server"
     },
     "app-bundler": {
-        "file": "src/export.ts",
-        "outputMain": "lib/shellbee.js",
-        "package": {
-            "module": "commonjs",
-            "commonjs": {
-                "output": "simplified"
+        "apps": {
+            "cli": {
+                "file": "src/cli.ts",
+                "outputMain": "lib/cli.js"
+            },
+            "module": {
+                "file": "src/export.ts",
+                "outputMain": "lib/shellbee.js"
             }
         },
-        "extensions": {
-            "io": {
-                "type": "js"
+        "common": {
+            "package": {
+                "module": "commonjs",
+                "commonjs": {
+                    "output": "simplified"
+                }
+            },
+            "extensions": {
+                "io": {
+                    "type": "js"
+                }
+            },
+            "defaultExtensions": {
+                "js": "ts"
+            },
+            "dynamicDependencies": [
+                "atma-io",
+                "atma-utils",
+                "^path$",
+                "child_process",
+                "tree-kill"
+            ],
+            "middlewares": {
+                "ts": [
+                    "atma-loader-ts:read"
+                ]
             }
-        },
-        "defaultExtensions": {
-            "js": "ts"
-        },
-        "dynamicDependencies": [
-            "atma-io",
-            "atma-utils",
-            "^path$",
-            "child_process",
-            "tree-kill"
-        ],
-        "middlewares": {
-            "ts": [
-                "atma-loader-ts:read"
-            ]
         }
     },
     "atma": {
