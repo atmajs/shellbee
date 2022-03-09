@@ -92,9 +92,29 @@ export class Shell extends class_EventEmitter<IProcessEvents> {
         });
     }
 
-    static run(params: IShellParams): Promise<Shell> {
+    /**
+     * Static "run" intializes the Shell instance and calls "run" instance method.
+     * @return Returns a promise, which is resolved after all commands exit.
+     */
+    static run (command: string): Promise<Shell>
+    static run (commands: string[]): Promise<Shell>
+    static run (params: IShellParams): Promise<Shell>
+    static run (mix: string | string[] | IShellParams): Promise<Shell> {
+        let params: IShellParams;
+        if (typeof mix === 'string') {
+            params = { command: mix }
+        } else if (Array.isArray(mix)) {
+            params = { commands: mix }
+        } else {
+            params = mix;
+        }
         return new Shell(params).run();
     }
+
+    /**
+     * "Run" starts the command
+     * @returns Promise, which is resolved after the executables are completed.
+     */
     run(): Promise<Shell> {
         if (this.isBusy === false) {
             this.next();
@@ -104,15 +124,22 @@ export class Shell extends class_EventEmitter<IProcessEvents> {
     }
 
     static factory(config: IShellParams): Pick<typeof Shell, 'run'> {
-
         return {
-            run (params: IShellParams) {
+            run (mix: string | string[] | IShellParams) {
+                let params: IShellParams;
+                if (typeof mix === 'string') {
+                    params = { command: mix }
+                } else if (Array.isArray(mix)) {
+                    params = { commands: mix }
+                } else {
+                    params = mix;
+                }
                 return Shell.run({
                     ...config,
                     ...params,
                 });
             }
-        }
+        };
     }
 
     onStart(cb: (data: { command: string }) => void): this {

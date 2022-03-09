@@ -1,6 +1,6 @@
 {
     "name": "shellbee",
-    "version": "0.5.17",
+    "version": "0.5.18",
     "main": "./lib/shellbee.js",
     "bin": {
         "shellbee": "index.js"
@@ -12,6 +12,7 @@
     "dependencies": {
         "atma-io": "^1.2.26",
         "atma-utils": "^0.1.38",
+        "ruta": "^0.2.71",
         "tree-kill": "^1.2.2"
     },
     "devDependencies": {

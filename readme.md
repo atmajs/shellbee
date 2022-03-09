@@ -9,16 +9,19 @@
 
 ----
 
-[![Build Status](https://travis-ci.com/atmajs/shellbee.svg?branch=master)](https://travis-ci.com/atmajs/shellbee)
+[![Build Status](https://api.travis-ci.com/atmajs/shellbee.svg?branch=master)](https://app.travis-ci.com/github/atmajs/shellbee)
 [![NPM version](https://badge.fury.io/js/shellbee.svg)](http://badge.fury.io/js/shellbee)
+
 
 
 ```ts
 import { Shell } from 'shellbee'
 
-let shell: Shell = await Shell.run(command: IShellParams);
+// executes commmands and waits until they exit
+let shell: Shell = await Shell.run(command: string | string[] | IShellParams);
 
-// with callbacks
+
+// instatiate the new shell instance, attach all required event listeners, etc, and later call `run` to start executing
 let shell = new Shell({ command: `git commit -am "foo"` });
 
 interface IShellParams {

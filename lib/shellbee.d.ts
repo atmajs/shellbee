@@ -4,7 +4,9 @@
 //   ../child_process
 
 declare module 'shellbee' {
-    export { Shell } from 'shellbee/Shell';
+    import { Shell } from 'shellbee/Shell';
+    export { Shell };
+    export const run: typeof Shell.run;
 }
 
 declare module 'shellbee/Shell' {
@@ -15,106 +17,116 @@ declare module 'shellbee/Shell' {
     import { CommunicationChannel } from 'shellbee/CommunicationChannel';
     export type ProcessEventType = 'process_start' | 'process_exception' | 'process_exit' | 'process_ready' | 'process_stdout' | 'process_stderr';
     export interface IProcessEvents {
-        process_start(data: {
-            command: string;
-        }): any;
-        process_exception(data: {
-            command: string;
-            error: Error | string;
-        }): any;
-        process_exit(data: {
-            command: string;
-            code: number;
-            result: ProcessResult;
-        }): any;
-        process_ready(data: {
-            command: string;
-        }): any;
-        process_stdout(data: {
-            command: string;
-            buffer: Buffer | string;
-        }): any;
-        process_stderr(data: {
-            command: string;
-            buffer: Buffer | string;
-        }): any;
-        channel_closed(data: {
-            channel: CommunicationChannel;
-        }): any;
-        channel_created(data: {
-            channel: CommunicationChannel;
-        }): any;
+            process_start(data: {
+                    command: string;
+            }): any;
+            process_exception(data: {
+                    command: string;
+                    error: Error | string;
+            }): any;
+            process_exit(data: {
+                    command: string;
+                    code: number;
+                    result: ProcessResult;
+            }): any;
+            process_ready(data: {
+                    command: string;
+            }): any;
+            process_stdout(data: {
+                    command: string;
+                    buffer: Buffer | string;
+            }): any;
+            process_stderr(data: {
+                    command: string;
+                    buffer: Buffer | string;
+            }): any;
+            channel_closed(data: {
+                    channel: CommunicationChannel;
+            }): any;
+            channel_created(data: {
+                    channel: CommunicationChannel;
+            }): any;
     }
     export class Shell extends class_EventEmitter<IProcessEvents> {
-        static ipc: typeof CommunicationChannel.ipc;
-        children: child_process.ChildProcess[];
-        errors: {
-            command: string;
-            error: Error;
-        }[];
-        lastCode: number;
-        currentOptions: ICommandOptions;
-        commands: ICommandOptions[];
-        results: ProcessResult[];
-        extracted: {};
-        state: ShellState;
-        promise: Promise<Shell>;
-        std: string[];
-        stderr: string[];
-        stdout: string[];
-        start: Date;
-        end: Date;
-        isBusy: boolean;
-        isReady: boolean;
-        channel: CommunicationChannel;
-        params: IShellParams;
-        constructor(params: IShellParams);
-        static run(params: IShellParams): Promise<Shell>;
-        run(): Promise<Shell>;
-        static factory(config: IShellParams): Pick<typeof Shell, 'run'>;
-        onStart(cb: (data: {
-            command: string;
-        }) => void): this;
-        onStdout(cb: (data: {
-            command: string;
-            buffer: string;
-        }) => void): this;
-        onStderr(cb: (data: {
-            command: string;
-            buffer: string;
-        }) => void): this;
-        onExit(cb: (data: {
-            command: string;
-            code: number;
-            result: ProcessResult;
-        }) => void): this;
-        /** When rgxReady is specified the event will be called */
-        onReady(cb: ({ command: string }: {
-            command: any;
-        }) => void): this;
-        onReadyAsync(): Promise<{
-            command: string;
-        }>;
-        onComplete(cb: (shell: Shell) => void): this;
-        onCompleteAsync(): Promise<this>;
-        kill(signal?: number | NodeJS.Signals): Promise<unknown>;
-        /** Uses tree-kill to terminate the tree */
-        terminate(): Promise<unknown>;
-        send<TOut = any>(method: string, ...args: any[]): Promise<TOut>;
+            static ipc: typeof CommunicationChannel.ipc;
+            children: child_process.ChildProcess[];
+            errors: {
+                    command: string;
+                    error: Error;
+            }[];
+            lastCode: number;
+            currentOptions: ICommandOptions;
+            commands: ICommandOptions[];
+            results: ProcessResult[];
+            extracted: {};
+            state: ShellState;
+            promise: Promise<Shell>;
+            std: string[];
+            stderr: string[];
+            stdout: string[];
+            start: Date;
+            end: Date;
+            isBusy: boolean;
+            isReady: boolean;
+            channel: CommunicationChannel;
+            params: IShellParams;
+            constructor(params: IShellParams);
+            /**
+                * Static "run" intializes the Shell instance and calls "run" instance method.
+                * @return Returns a promise, which is resolved after all commands exit.
+                */
+            static run(command: string): Promise<Shell>;
+            static run(commands: string[]): Promise<Shell>;
+            static run(params: IShellParams): Promise<Shell>;
+            /**
+                * "Run" starts the command
+                * @returns Promise, which is resolved after the executables are completed.
+                */
+            run(): Promise<Shell>;
+            static factory(config: IShellParams): Pick<typeof Shell, 'run'>;
+            onStart(cb: (data: {
+                    command: string;
+            }) => void): this;
+            onStdout(cb: (data: {
+                    command: string;
+                    buffer: string;
+            }) => void): this;
+            onStderr(cb: (data: {
+                    command: string;
+                    buffer: string;
+            }) => void): this;
+            onExit(cb: (data: {
+                    command: string;
+                    code: number;
+                    result: ProcessResult;
+            }) => void): this;
+            /** When rgxReady is specified the event will be called */
+            onReady(cb: ({ command: string }: {
+                    command: any;
+            }) => void): this;
+            onReadyAsync(): Promise<{
+                    command: string;
+            }>;
+            onComplete(cb: (shell: Shell) => void): this;
+            onCompleteAsync(): Promise<this>;
+            kill(signal?: number | NodeJS.Signals): Promise<unknown>;
+            /** Uses tree-kill to terminate the tree */
+            terminate(): Promise<unknown>;
+            send<TOut = any>(method: string, ...args: any[]): Promise<TOut>;
     }
     export class ProcessResult {
-        options: ICommandOptions;
-        std: string[];
-        stdout: string[];
-        stderr: string[];
-        resultCode: number;
-        error: Error;
-        constructor(options: ICommandOptions);
+            options: ICommandOptions;
+            std: string[];
+            stdout: string[];
+            stderr: string[];
+            resultCode: number;
+            error: Error;
+            constructor(options: ICommandOptions);
     }
     enum ShellState {
-        Empty = -1,
-        Initial = 0,
-        Started = 1
+            Empty = -1,
+            Initial = 0,
+            Started = 1
     }
     export {};
 }
