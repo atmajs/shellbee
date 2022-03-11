@@ -7,7 +7,7 @@ UTest({
     },
     async 'should list process' () {
         let list = await PsList.read();
-        let self = list.find(x => x.cmd.includes('atma test'));
-        notEq_(self, null);
+        let self = list.find(x => x.cmd.includes('index.js test'));
+        notEq_(self, null, 'Self process not found');
     },
 })

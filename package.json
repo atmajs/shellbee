@@ -1,6 +1,6 @@
 {
     "name": "shellbee",
-    "version": "0.5.18",
+    "version": "0.5.19",
     "main": "./lib/shellbee.js",
     "bin": {
         "shellbee": "index.js"
@@ -18,8 +18,8 @@
     "devDependencies": {
         "@types/node": "^12.6.2",
         "app-bundler": "0.0.70",
-        "atma": "^0.12.33",
-        "atma-loader-ts": "^1.1.16",
+        "atma": "^0.15.12",
+        "atma-loader-ts": "^1.1.17",
         "atma-utest": "^0.21.16",
         "dts-bundle": "^0.7.3",
         "typescript": "^4.4.3"
@@ -77,11 +77,6 @@
             "atma-loader-ts"
         ],
         "settings": {
-            "atma-utest": {
-                "include": {
-                    "amd": true
-                }
-            },
             "include": {
                 "amd": true,
                 "extentionDefault": {
@@ -89,13 +84,17 @@
                 }
             },
             "atma-loader-ts": {
+                "extensions": [
+                    "ts",
+                    "test"
+                ],
                 "typescript": {
                     "compilerOptions": {
                         "#if (TEST)": {
                             "module": "AMD"
                         },
                         "#if (!TEST)": {
-                            "module": "commonjs"
+                            "module": "CommonJS"
                         },
                         "sourceMap": false
                     }

@@ -95,13 +95,15 @@ UTest({
             has_(error.message, 'Exit code: 1');
         }
 
+        await wait(200);
 
+        notEq_(shell.channel, null, 'Process was not restarted');
         let result = await shell.channel.call('echo', 'g');
         eq_(result, 'echo:g');
     },
     async 'ipc' () {
         let shell = new Shell({
-            command: './node_modules/atma/atma run test/fixtures/ipc.ts',
+            command: './node_modules/atma/index.js run test/fixtures/ipc.ts --TEST',
             //silent: true,
             fork: true,
             ipc: true,
@@ -116,3 +118,9 @@ UTest({
         eq_(strb, 'got: b');
     }
 })
+
+function wait (ms) {
+    return new Promise(resolve => {
+        setTimeout(resolve, ms);
+    });
+}
