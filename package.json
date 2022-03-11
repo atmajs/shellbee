@@ -1,6 +1,6 @@
 {
     "name": "shellbee",
-    "version": "0.5.19",
+    "version": "0.5.20",
     "main": "./lib/shellbee.js",
     "bin": {
         "shellbee": "index.js"
@@ -10,17 +10,16 @@
         "email": "alex.kit@atmajs.com"
     },
     "dependencies": {
-        "atma-io": "^1.2.26",
+        "atma-io": "^1.2.56",
         "atma-utils": "^0.1.38",
         "ruta": "^0.2.71",
         "tree-kill": "^1.2.2"
     },
     "devDependencies": {
         "@types/node": "^12.6.2",
-        "app-bundler": "0.0.70",
+        "app-bundler": "^0.1.2",
         "atma": "^0.15.12",
         "atma-loader-ts": "^1.1.17",
-        "atma-utest": "^0.21.16",
         "dts-bundle": "^0.7.3",
         "typescript": "^4.4.3"
     },
