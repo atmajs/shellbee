@@ -5,6 +5,7 @@
 
 declare module 'shellbee' {
     import { Shell } from 'shellbee/Shell';
+    export { restartSelf } from 'shellbee/util/restartSelf';
     export { Shell };
     export const run: typeof Shell.run;
 }
@@ -129,6 +130,10 @@ declare module 'shellbee/Shell' {
             Started = 1
     }
     export {};
+}
+
+declare module 'shellbee/util/restartSelf' {
+    export function restartSelf(): void;
 }
 
 declare module 'shellbee/interface/IProcessParams' {

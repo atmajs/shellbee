@@ -49,14 +49,17 @@ function command_parse(command: string, params: IShellParams) {
     }
 
     let parts = command.trim().split(/\s+/);
-    let imax = parts.length, i = -1, c, arg;
+    let imax = parts.length;
+    let i = -1;
     while (++i < imax) {
-        arg = parts[i];
-        if (arg.length === 0)
+        let arg = parts[i];
+        if (arg.length === 0) {
             continue;
-        c = arg[0];
-        if (c !== '"' && c !== "'")
+        }
+        let c = arg[0];
+        if (c !== '"' && c !== "'") {
             continue;
+        }
         let start = i;
         for (; i < imax; i++) {
             arg = parts[i];
@@ -67,6 +70,8 @@ function command_parse(command: string, params: IShellParams) {
                     .slice(1, -1);
                 parts.splice(start, 0, str);
                 imax = parts.length;
+
+                i--;
                 break;
             }
         }
