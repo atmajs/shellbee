@@ -10,9 +10,17 @@ export interface IShellParams {
     fork?: boolean
     ipc?: boolean
     restartOnErrorExit?: boolean | {
+        // delay before restart
         delayMs?: number
         maxRestartTimespanMs?: number
         maxRestartCount?: number
+    }
+    restartOnStalledOutput?: {
+        emptyOutputInterval: number
+    }
+    restartOptions?: {
+        // path to a script, which will be "required" and can handle and modify current restart intent
+        beforeRestartHandler?: string
     }
 
     verbose?: boolean

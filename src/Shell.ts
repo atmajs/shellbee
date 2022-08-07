@@ -10,6 +10,7 @@ import { events_someOnce } from './util/events';
 import * as treeKill from 'tree-kill';
 import { ShellParamsUtil } from './util/ShellParamsUtil';
 import { ShellErrorExitsHandler } from './util/ShellErrorExitsHandler';
+import { ShellStalledOutputHandler } from './util/ShellStalledOutputHandler';
 
 
 export type ProcessEventType =
@@ -51,15 +52,22 @@ export interface IProcessEvents {
 export class Shell extends class_EventEmitter<IProcessEvents> {
 
     private errorsHandler: ShellErrorExitsHandler;
+    private stalledOutputHandler: ShellStalledOutputHandler;
 
     static ipc = CommunicationChannel.ipc;
 
-    children = [] as child_process.ChildProcess[]
+    children = [] as {
+        process: child_process.ChildProcess
+        options: ICommandOptions
+    }[];
+
     errors = [] as { command: string, error: Error }[]
     lastCode: number = 0
 
     currentOptions: ICommandOptions
     commands: ICommandOptions[]
+    commandsQueue: ICommandOptions[]
+
     results = [] as ProcessResult[]
     extracted = {}
     state = ShellState.Initial
@@ -81,11 +89,14 @@ export class Shell extends class_EventEmitter<IProcessEvents> {
 
         this.params = ShellParamsUtil.normalize(params);
         this.errorsHandler = new ShellErrorExitsHandler(this.params);
+        this.stalledOutputHandler = new ShellStalledOutputHandler(this.params, this);
+        this.stalledOutputHandler.init();
 
         this.commands = command_parseAll(
             params.commands,
             params
         );
+        this.commandsQueue = this.commands.slice();
 
         this.on('process_start', () => {
             this.state = ShellState.Started;
@@ -156,7 +167,14 @@ export class Shell extends class_EventEmitter<IProcessEvents> {
     }
     /** When rgxReady is specified the event will be called */
     onReady(cb: ({ command: string }) => void): this {
-        if (!this.currentOptions?.matchReady && this.commands.some(x => x.matchReady) === false) {
+        let isAlreadyCompleted = this.isBusy === false && this.lastCode != null;
+        let isReady = this.isReady;
+        if (isReady || isAlreadyCompleted) {
+            cb({ command: this.currentOptions?.command });
+            return;
+        }
+
+        if (!this.currentOptions?.matchReady && this.commandsQueue.some(x => x.matchReady) === false) {
             console.error('Ready Matcher Regex is not defined', this.currentOptions?.command ?? this.commands?.[0]?.command);
         }
         return this.on('process_ready', cb);
@@ -175,14 +193,51 @@ export class Shell extends class_EventEmitter<IProcessEvents> {
             this.onComplete(resolve as any)
         });
     }
-    kill(signal: number | NodeJS.Signals = 'SIGINT') {
+
+    kill(signal?: number | NodeJS.Signals)
+    kill(options?: TKillOptions)
+    kill(mix: number | NodeJS.Signals | TKillOptions) {
+
+        let signal: number | NodeJS.Signals = 'SIGINT';
+        let commandIdx: number  = 0;
+        let terminateAfterMs: number = null;
+
+        if (mix != null) {
+
+            signal = (typeof mix === 'object' ? mix.signal : mix) ?? signal;
+            if (typeof mix === 'object') {
+                commandIdx = mix.commandIdx ?? commandIdx;
+                terminateAfterMs = mix.terminateAfter ?? terminateAfterMs;
+            }
+        }
+
         return new Promise(resolve => {
-            let child = this.children.pop();
+            let isCompleted = this.isBusy === false && this.lastCode != null;
+            if (isCompleted) {
+                return resolve(null);
+            }
+            let options = this.commands[commandIdx];
+            let child = this.children.find(x => x.options === options);
             if (child == null) {
                 return resolve(null);
             }
-            this.once('process_exit', resolve);
-            child.kill(signal);
+            let i = this.children.indexOf(child);
+            this.children.splice(i, 1);
+
+            let timeout;
+
+            child.process.kill(signal);
+            this.once('process_exit', () => {
+                if (timeout != null) {
+                    clearTimeout(timeout);
+                }
+                resolve(null);
+            });
+            if (terminateAfterMs != null) {
+                timeout = setTimeout(() => {
+                    (treeKill as any)(child.process.pid);
+                }, terminateAfterMs);
+            }
         });
     }
     /** Uses tree-kill to terminate the tree */
@@ -193,7 +248,7 @@ export class Shell extends class_EventEmitter<IProcessEvents> {
                 return resolve(null);
             }
             this.once('process_exit', resolve);
-            (treeKill as any)(child.pid);
+            (treeKill as any)(child.process.pid);
         });
     }
 
@@ -204,6 +259,30 @@ export class Shell extends class_EventEmitter<IProcessEvents> {
             }, reject)
         });
     }
+
+    async restart (index?: number)
+    async restart (command?: string)
+    async restart (mix: number | string = 0) {
+        let options: ICommandOptions;
+        if (typeof mix === 'number') {
+            options = this.commands[mix]
+        } else {
+            options = this.commands.find(x => x.command === mix);
+        }
+        if (options == null) {
+            throw new Error(`Options undefined for ${mix}`);
+        }
+
+        this.commandsQueue.push(options);
+
+        if (this.isBusy === false) {
+            this.next();
+            return;
+        }
+        // `next` is be called indirect (after the process exits)
+        await this.kill({ terminateAfter: 10_000 })
+    }
+
     private waitForChannel() {
         if (this.currentOptions.ipc && this.isReady === false) {
             return new Promise((resolve, reject) => {
@@ -242,20 +321,20 @@ export class Shell extends class_EventEmitter<IProcessEvents> {
             this.emit('channel_closed', {
                 channel: this.channel
             });
-            if (this.commands.length !== 0 || (this.lastCode === 1 && this.errorsHandler.isActive())) {
+            if (this.commandsQueue.length !== 0 || (this.lastCode === 1 && this.errorsHandler.isActive())) {
                 this.channel = null;
             }
         }
         if (this.lastCode === 1 && this.errorsHandler.isActive()) {
             this.lastCode = 0;
-            this.commands.push(this.currentOptions);
+            this.commandsQueue.push(this.currentOptions);
             this.errorsHandler.delay(() => {
                 this.next();
             });
             return this.promise;
         }
 
-        if (this.commands.length === 0) {
+        if (this.commandsQueue.length === 0) {
             if (this.state !== ShellState.Empty) {
                 this.state = ShellState.Empty;
                 this.end = new Date();
@@ -268,8 +347,8 @@ export class Shell extends class_EventEmitter<IProcessEvents> {
             return this.promise as any;
         }
 
-        let child = null;
-        let options = this.commands.shift();
+        let child = null as child_process.ChildProcess;
+        let options = this.commandsQueue.shift();
         let command: string = ValueExtractor.interpolateAny(options.command, this.extracted);
         let rgxReady = options.matchReady;
         let detached = options.detached === true;
@@ -337,7 +416,12 @@ export class Shell extends class_EventEmitter<IProcessEvents> {
                     channel: this.channel
                 });
             }
-            this.children.push(child);
+
+            result.pid = child.pid;
+            this.children.push({
+                process: child,
+                options: options,
+            });
         } catch (error) {
             if (this.params.verbose) {
                 this.print('on start exception:', error);
@@ -367,13 +451,15 @@ export class Shell extends class_EventEmitter<IProcessEvents> {
             if (this.params.verbose) {
                 this.print('on exit:', code);
             }
-            result.resultCode = code;
+            result.resultCode = code ?? 0;
 
             this.emit('process_exit', {
                 command: command,
                 code: code,
                 result: result
             });
+            this.isBusy = false;
+            this.isReady = false;
             this.lastCode = code;
 
             if (code > 0) {
@@ -460,6 +546,7 @@ export class Shell extends class_EventEmitter<IProcessEvents> {
 
 export class ProcessResult {
 
+    pid: number
     std: string[] = []
     stdout: string[] = []
     stderr: string[] = []
@@ -477,4 +564,11 @@ enum ShellState {
     Empty = -1,
     Initial = 0,
     Started = 1
+}
+
+
+type TKillOptions = {
+    signal?: number | NodeJS.Signals
+    commandIdx?: number
+    terminateAfter?: number
 }
