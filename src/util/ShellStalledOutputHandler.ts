@@ -16,7 +16,7 @@ export class ShellStalledOutputHandler {
         let { shell, params } = this;
 
         this._ms = params.restartOnStalledOutput?.emptyOutputInterval;
-        if (typeof this._ms !== 'number') {
+        if (typeof this._ms !== 'number' || this._ms === 0) {
             return;
         }
 

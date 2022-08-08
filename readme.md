@@ -161,4 +161,21 @@ process.on('message', async (message: { id, method, args }) => {
 ```
 
 
-----
+### CLI
+
+Execute a CLI task and makes sure it restarts on error or when output got stalled. For example you want to run a script from npm scripts forever, e.g. "npm run foo"
+
+```bash
+shellbee run npm run foo
+    --delay <ms_delay_between_restart>
+    --restart <max_restart_count_within_window>
+    --restart-window <ms_window_errors>
+    --stalled-output <restart_on_ms_no_output>
+```
+
+- `dalay` - Milliseconds before the process is started again
+- `restart` - Amount of restarts within a time window. For example if the process has been crashed for 10 times within 30 seconds, do not restart any more.
+- `restart-window` - Milliseconds, a time-frame to count crashes in, when to many crashes occur (defined by `restart`) `shellbee` stops restarting the process.
+- `stalled-output` - Milliseconds, if the process has no output (`stdout`, `stderr`) for this time, then we assume the process has stopped responding, so `shellbee` will restart it
+
+---

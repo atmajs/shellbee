@@ -16,7 +16,11 @@ export const Commands = {
                 delayMs: Number(Args.get(args, '--delay', String(5 * 1000))),
                 maxRestartCount: Number(Args.get(args, '--restart', String(10))),
                 maxRestartTimespanMs: Number(Args.get(args, '--restart-window', String(30 * 1000))),
+            },
+            restartOnStalledOutput: {
+                emptyOutputInterval: Number(Args.get(args, '--stalled-output', String(0)))
             }
+
         });
         await shell.run();
         await shell.onCompleteAsync();
