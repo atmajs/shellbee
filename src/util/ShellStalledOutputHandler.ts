@@ -1,4 +1,3 @@
-import { clearTimeout } from 'timers';
 import { IShellParams } from '../interface/IProcessParams';
 import type { Shell } from '../Shell';
 

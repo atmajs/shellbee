@@ -5,7 +5,7 @@ export { restartSelf } from './util/restartSelf'
 
 export { Shell }
 export const run = Shell.run;
-export const utils = {
+export const ShellUtils = {
     process: {
         getAll: PsList.getAll,
         getByPort: Net.findByPort,

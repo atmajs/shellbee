@@ -4,10 +4,55 @@
 //   ../child_process
 
 declare module 'shellbee' {
+    import { Net } from 'shellbee/ps/Net';
+    import { PsList } from 'shellbee/ps/PsList';
     import { Shell } from 'shellbee/Shell';
     export { restartSelf } from 'shellbee/util/restartSelf';
     export { Shell };
     export const run: typeof Shell.run;
+    export const ShellUtils: {
+        process: {
+            getAll: typeof PsList.getAll;
+            getByPort: typeof Net.findByPort;
+            kill: typeof PsList.kill;
+        };
+    };
+}
+
+declare module 'shellbee/ps/Net' {
+    export namespace Net {
+        interface IProcess {
+            pid: string;
+            status?: string;
+            protocol: 'tcp' | 'udp' | string;
+        }
+        export function findByPort(port: string | number): Promise<IProcess[]>;
+        export {};
+    }
+}
+
+declare module 'shellbee/ps/PsList' {
+    interface IProcess {
+        /** ParentProcessId */
+        pid: number;
+        /** ProcessId */
+        ppid: number;
+        /** UserId (nix) */
+        uid?: number;
+        /** GroupId (nix) */
+        gid?: number;
+        /** ExecutablePath */
+        bin: string;
+        /** Name */
+        name: string;
+        /** Command  */
+        cmd: string;
+    }
+    export namespace PsList {
+        function getAll(): Promise<IProcess[]>;
+        function kill(pid: number | string): Promise<any>;
+    }
+    export {};
 }
 
 declare module 'shellbee/Shell' {
@@ -50,7 +95,10 @@ declare module 'shellbee/Shell' {
     }
     export class Shell extends class_EventEmitter<IProcessEvents> {
             static ipc: typeof CommunicationChannel.ipc;
-            children: child_process.ChildProcess[];
+            children: {
+                    process: child_process.ChildProcess;
+                    options: ICommandOptions;
+            }[];
             errors: {
                     command: string;
                     error: Error;
@@ -58,6 +106,7 @@ declare module 'shellbee/Shell' {
             lastCode: number;
             currentOptions: ICommandOptions;
             commands: ICommandOptions[];
+            commandsQueue: ICommandOptions[];
             results: ProcessResult[];
             extracted: {};
             state: ShellState;
@@ -102,21 +151,25 @@ declare module 'shellbee/Shell' {
                     result: ProcessResult;
             }) => void): this;
             /** When rgxReady is specified the event will be called */
-            onReady(cb: ({ command: string }: {
-                    command: any;
+            onReady(cb: (result: {
+                    command: string;
             }) => void): this;
             onReadyAsync(): Promise<{
                     command: string;
             }>;
             onComplete(cb: (shell: Shell) => void): this;
             onCompleteAsync(): Promise<this>;
-            kill(signal?: number | NodeJS.Signals): Promise<unknown>;
+            kill(signal?: number | NodeJS.Signals): any;
+            kill(options?: TKillOptions): any;
             /** Uses tree-kill to terminate the tree */
             terminate(): Promise<unknown>;
             send<TOut = any>(method: string, ...args: any[]): Promise<TOut>;
+            restart(index?: number): any;
+            restart(command?: string): any;
     }
     export class ProcessResult {
             options: ICommandOptions;
+            pid: number;
             std: string[];
             stdout: string[];
             stderr: string[];
@@ -129,6 +182,11 @@ declare module 'shellbee/Shell' {
             Initial = 0,
             Started = 1
     }
+    type TKillOptions = {
+            signal?: number | NodeJS.Signals;
+            commandIdx?: number;
+            terminateAfter?: number;
+    };
     export {};
 }
 
@@ -151,6 +209,12 @@ declare module 'shellbee/interface/IProcessParams' {
             delayMs?: number;
             maxRestartTimespanMs?: number;
             maxRestartCount?: number;
+        };
+        restartOnStalledOutput?: {
+            emptyOutputInterval: number;
+        };
+        restartOptions?: {
+            beforeRestartHandler?: string;
         };
         verbose?: boolean;
         timeoutMs?: number;
