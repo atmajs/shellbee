@@ -2,12 +2,30 @@ import { Shell } from '../Shell';
 import * as path from 'path';
 import * as treeKill from 'tree-kill';
 
+interface IProcess {
+    /** ParentProcessId */
+    pid: number
+    /** ProcessId */
+    ppid: number
+    /** UserId (nix) */
+    uid?: number
+    /** GroupId (nix) */
+    gid?: number
+
+    /** ExecutablePath */
+    bin: string
+    /** Name */
+    name: string
+    /** Command  */
+    cmd: string
+}
+
 export namespace PsList {
 
-    export async function read() {
+    export async function getAll(): Promise<IProcess[]> {
         return Platforms[process.platform]();
     }
-    export async function kill(pid: number) {
+    export async function kill(pid: number | string) {
         return (treeKill as any)(pid);
     }
 
@@ -57,7 +75,7 @@ export namespace PsList {
 
             return list;
         }
-    }
+    };
 
     const Platforms = {
         darwin: ProcessListResolver.nix,
@@ -65,8 +83,7 @@ export namespace PsList {
         sunos: ProcessListResolver.nix,
         freebsd: ProcessListResolver.nix,
         win32: ProcessListResolver.win32,
-
-    }
+    };
 
 
     function fetchBin(cmd) {

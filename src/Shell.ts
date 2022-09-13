@@ -166,7 +166,7 @@ export class Shell extends class_EventEmitter<IProcessEvents> {
         return this.on('process_exit', cb);
     }
     /** When rgxReady is specified the event will be called */
-    onReady(cb: ({ command: string }) => void): this {
+    onReady(cb: (result: { command: string }) => void): this {
         let isAlreadyCompleted = this.isBusy === false && this.lastCode != null;
         let isReady = this.isReady;
         if (isReady || isAlreadyCompleted) {
