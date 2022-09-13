@@ -11,12 +11,12 @@ before_script:
   - sleep 3
   - npm run build &
   - sleep 8
- 
+
 script:
   - "npm test"
- 
+
 language: node_js
 
 
 node_js:
-  - "10.1.0"
+  - 18
