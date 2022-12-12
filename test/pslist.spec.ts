@@ -13,6 +13,8 @@ UTest({
         notEq_(self, null, 'Self process not found');
     },
     async 'find pid by port' () {
+        let x = await Net.findByPort('9001');
+        console.log(x);
 
         let server = http.createServer().listen();
         let port = (server.address() as any).port;

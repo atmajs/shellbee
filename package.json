@@ -1,6 +1,6 @@
 {
     "name": "shellbee",
-    "version": "0.5.27",
+    "version": "0.5.28",
     "main": "./lib/shellbee.js",
     "bin": {
         "shellbee": "index.js"
