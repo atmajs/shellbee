@@ -1,5 +1,6 @@
 import alot from 'alot';
 import { Shell } from '../Shell';
+import { PsList } from './PsList';
 
 export namespace Net {
 
@@ -90,4 +91,13 @@ export namespace Net {
         let arr: IProcess[] = await Platforms[process.platform](port);
         return alot(arr).distinctBy(x => x.pid).toArray();
     };
+    export async function killByPort(port: string | number): Promise<IProcess[]> {
+        let processes = await findByPort(port);
+        await alot(processes).forEachAsync(async x => {
+            if (x.pid) {
+                await PsList.kill(x.pid)
+            }
+        }).toArrayAsync();
+        return processes;
+    }
 }

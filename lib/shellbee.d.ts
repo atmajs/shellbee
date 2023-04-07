@@ -15,6 +15,7 @@ declare module 'shellbee' {
             getAll: typeof PsList.getAll;
             getByPort: typeof Net.findByPort;
             kill: typeof PsList.kill;
+            killByPort: typeof Net.killByPort;
         };
     };
 }
@@ -27,6 +28,7 @@ declare module 'shellbee/ps/Net' {
             protocol: 'tcp' | 'udp' | string;
         }
         export function findByPort(port: string | number): Promise<IProcess[]>;
+        export function killByPort(port: string | number): Promise<IProcess[]>;
         export {};
     }
 }

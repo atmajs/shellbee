@@ -34,7 +34,7 @@ UTest({
             has_(error.message, 'Cannot find module');
         }
     },
-    async 'forked script throws exception' (done) {
+    async 'forked script throws exception' () {
         let shell = new Shell({
             command: 'test/fixtures/fork.js',
             silent: true,

@@ -10,5 +10,6 @@ export const ShellUtils = {
         getAll: PsList.getAll,
         getByPort: Net.findByPort,
         kill: PsList.kill,
+        killByPort: Net.killByPort,
     }
 };
