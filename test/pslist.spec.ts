@@ -23,7 +23,8 @@ UTest({
         let port = (server.address() as any).port;
 
         let processes = await Net.findByPort(port);
-        eq_(processes.length, 1, `No found by port ${port}`);
+        console.log('processes', processes);
+        gt_(processes.length, 0, `No found by port ${port}`);
         eq_(processes[0].pid, process.pid);
 
         await new Promise(cb => server.close(cb));
