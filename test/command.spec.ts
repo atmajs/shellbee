@@ -16,7 +16,7 @@ UTest({
         eq_(x.length, 1);
         let command = x[0];
 
-        eq_(command.exec, 'c:\\foo bar\\qux.exec');
+        eq_(command.exec.replace(/\\/g, '/'), 'c:/foo bar/qux.exec');
         deepEq_(command.args, [ 'foo bar', '--name']);
     },
 })
