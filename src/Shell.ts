@@ -279,7 +279,7 @@ export class Shell extends class_EventEmitter<IProcessEvents> {
             this.next();
             return;
         }
-        // `next` is be called indirect (after the process exits)
+        // `next` will be called indirect (after the process exits)
         await this.kill({ terminateAfter: 10_000 })
     }
 

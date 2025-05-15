@@ -9,7 +9,8 @@
 
 ----
 
-[![Build Status](https://api.travis-ci.com/atmajs/shellbee.svg?branch=master)](https://app.travis-ci.com/github/atmajs/shellbee)
+[![CircleCI](https://dl.circleci.com/status-badge/img/gh/atmajs/shellbee/tree/master.svg?style=svg)](https://dl.circleci.com/status-badge/redirect/gh/atmajs/shellbee/tree/master)
+
 [![NPM version](https://badge.fury.io/js/shellbee.svg)](http://badge.fury.io/js/shellbee)
 
 
