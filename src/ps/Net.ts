@@ -5,7 +5,7 @@ import { PsList } from './PsList';
 export namespace Net {
 
     interface IProcess {
-        pid: string
+        pid: number
         status?: string
         protocol: 'tcp' | 'udp' | string
     }
@@ -89,7 +89,10 @@ export namespace Net {
 
     export async function findByPort(port: string | number): Promise<IProcess[]> {
         let arr: IProcess[] = await Platforms[process.platform](port);
-        return alot(arr).distinctBy(x => x.pid).toArray();
+        return alot(arr)
+            .filter(x => Boolean(x.pid))
+            .distinctBy(x => x.pid)
+            .toArray();
     };
     export async function killByPort(port: string | number): Promise<IProcess[]> {
         let processes = await findByPort(port);
